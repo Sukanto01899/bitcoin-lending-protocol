@@ -1,0 +1,21 @@
+@import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+:root {
+  font-family: "Space Grotesk", system-ui, -apple-system, sans-serif;
+  background: #fdf5e8;
+  color: #0b0d11;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(140deg, #fff3db 0%, #f7f4ff 40%, #eefbff 100%);
+}
+
+#root {
+  min-height: 100vh;
+}
