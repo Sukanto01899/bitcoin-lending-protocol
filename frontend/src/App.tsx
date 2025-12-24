@@ -11,6 +11,7 @@ import {
   PostConditionMode,
   callReadOnlyFunction,
   cvToJSON,
+  validateStacksAddress,
   stringAsciiCV,
   uintCV,
   principalCV,
@@ -29,10 +30,10 @@ const appDetails = {
 
 const reownProjectId = import.meta.env.VITE_REOWN_PROJECT_ID as string | undefined;
 const envDeployer = (import.meta.env.VITE_CONTRACT_DEPLOYER as string | undefined) || "";
-const envLendingPool = (import.meta.env.VITE_LENDING_POOL_CONTRACT as string | undefined) || "lending-pool";
-const envPriceOracle = (import.meta.env.VITE_PRICE_ORACLE_CONTRACT as string | undefined) || "price-oracle";
-const envGovernance = (import.meta.env.VITE_GOVERNANCE_CONTRACT as string | undefined) || "protocol-governance";
-const envPasskey = (import.meta.env.VITE_PASSKEY_CONTRACT as string | undefined) || "passkey-signer";
+const envLendingPool = (import.meta.env.VITE_LENDING_POOL_CONTRACT as string | undefined) || "lending-pool-v2";
+const envPriceOracle = (import.meta.env.VITE_PRICE_ORACLE_CONTRACT as string | undefined) || "price-oracle-v2";
+const envGovernance = (import.meta.env.VITE_GOVERNANCE_CONTRACT as string | undefined) || "protocol-governance-v2";
+const envPasskey = (import.meta.env.VITE_PASSKEY_CONTRACT as string | undefined) || "passkey-signer-v2";
 
 const menuItems = ["Lend", "Borrow", "Governance", "Features"] as const;
 type MenuItem = (typeof menuItems)[number];
@@ -92,8 +93,32 @@ function App() {
   }, []);
 
   const contractAddress = deployer.trim();
-  const canCall = contractAddress.length > 0;
-  const senderAddress = stxAddress || contractAddress || "ST000000000000000000002AMW42H";
+  const parseContractInput = (value: string, fallbackAddress: string) => {
+    const trimmed = value.trim();
+    if (trimmed.includes(".")) {
+      const [address, name] = trimmed.split(".");
+      return {
+        address,
+        name,
+        isValid: validateStacksAddress(address) && name.trim().length > 0,
+      };
+    }
+    return {
+      address: fallbackAddress,
+      name: trimmed,
+      isValid: validateStacksAddress(fallbackAddress) && trimmed.length > 0,
+    };
+  };
+
+  const isDeployerValid = contractAddress.length > 0 && validateStacksAddress(contractAddress);
+  const lendingPoolConfig = parseContractInput(lendingPool, contractAddress);
+  const isLendingPoolValid = lendingPoolConfig.isValid;
+  const canCall = isLendingPoolValid;
+  const senderAddress =
+    stxAddress ||
+    lendingPoolConfig.address ||
+    contractAddress ||
+    "ST000000000000000000002AMW42H";
   const shortAddress = stxAddress
     ? `${stxAddress.slice(0, 6)}...${stxAddress.slice(-4)}`
     : "Not connected";
@@ -141,15 +166,15 @@ function App() {
     functionArgs: Array<ReturnType<typeof uintCV> | ReturnType<typeof stringAsciiCV> | ReturnType<typeof principalCV>>,
   ) => {
     if (!canCall) {
-      setStatus("Set contract deployer address first.");
+      setStatus("Set a valid deployer address and lending pool contract name.");
       return;
     }
     setBusyAction(label);
     setStatus(`Awaiting wallet signature for ${label}...`);
     try {
       await openContractCall({
-        contractAddress,
-        contractName: lendingPool,
+        contractAddress: lendingPoolConfig.address,
+        contractName: lendingPoolConfig.name,
         functionName,
         functionArgs,
         network: stacksNetwork,
@@ -174,22 +199,22 @@ function App() {
 
   const refreshStats = async () => {
     if (!canCall) {
-      setStatus("Set contract deployer address first.");
+      setStatus("Set a valid deployer address and lending pool contract name.");
       return;
     }
     setStatus("Refreshing pool stats...");
     try {
       const totalDepositsCv = await callReadOnlyFunction({
-        contractAddress,
-        contractName: lendingPool,
+        contractAddress: lendingPoolConfig.address,
+        contractName: lendingPoolConfig.name,
         functionName: "get-total-deposits",
         functionArgs: [],
         network: stacksNetwork,
         senderAddress,
       });
       const totalBorrowsCv = await callReadOnlyFunction({
-        contractAddress,
-        contractName: lendingPool,
+        contractAddress: lendingPoolConfig.address,
+        contractName: lendingPoolConfig.name,
         functionName: "get-total-borrows",
         functionArgs: [],
         network: stacksNetwork,
@@ -215,38 +240,38 @@ function App() {
       return;
     }
     if (!canCall) {
-      setStatus("Set contract deployer address first.");
+      setStatus("Set a valid deployer address and lending pool contract name.");
       return;
     }
     setStatus("Refreshing your position...");
     try {
       const depositCv = await callReadOnlyFunction({
-        contractAddress,
-        contractName: lendingPool,
+        contractAddress: lendingPoolConfig.address,
+        contractName: lendingPoolConfig.name,
         functionName: "get-user-deposit",
         functionArgs: [principalCV(stxAddress)],
         network: stacksNetwork,
         senderAddress,
       });
       const collateralCv = await callReadOnlyFunction({
-        contractAddress,
-        contractName: lendingPool,
+        contractAddress: lendingPoolConfig.address,
+        contractName: lendingPoolConfig.name,
         functionName: "get-user-collateral",
         functionArgs: [principalCV(stxAddress)],
         network: stacksNetwork,
         senderAddress,
       });
       const loanCv = await callReadOnlyFunction({
-        contractAddress,
-        contractName: lendingPool,
+        contractAddress: lendingPoolConfig.address,
+        contractName: lendingPoolConfig.name,
         functionName: "get-user-loan",
         functionArgs: [principalCV(stxAddress)],
         network: stacksNetwork,
         senderAddress,
       });
       const healthCv = await callReadOnlyFunction({
-        contractAddress,
-        contractName: lendingPool,
+        contractAddress: lendingPoolConfig.address,
+        contractName: lendingPoolConfig.name,
         functionName: "get-health-factor",
         functionArgs: [principalCV(stxAddress)],
         network: stacksNetwork,
@@ -336,7 +361,13 @@ function App() {
         </div>
         <div>
           <span>Contracts</span>
-          <strong>{canCall ? `${contractAddress}.*` : "Missing deployer address"}</strong>
+          <strong>
+            {canCall
+              ? `${lendingPoolConfig.address}.${lendingPoolConfig.name}`
+              : isDeployerValid
+                ? "Set lending pool name"
+                : "Invalid deployer address"}
+          </strong>
         </div>
         <div>
           <span>Status</span>
@@ -647,6 +678,9 @@ function App() {
                 value={deployer}
                 onChange={(event) => setDeployer(event.target.value)}
                 placeholder="ST..."
+                className={
+                  isDeployerValid || deployer.trim().length === 0 ? "" : "input-error"
+                }
               />
             </label>
             <label>
@@ -654,6 +688,9 @@ function App() {
               <input
                 value={lendingPool}
                 onChange={(event) => setLendingPool(event.target.value)}
+                className={
+                  isLendingPoolValid || lendingPool.trim().length === 0 ? "" : "input-error"
+                }
               />
             </label>
             <label>
@@ -685,3 +722,4 @@ function App() {
 }
 
 export default App;
+

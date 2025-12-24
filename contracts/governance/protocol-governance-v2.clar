@@ -1,9 +1,6 @@
 ;; Protocol Governance Contract
 ;; ============================
-;; CLARITY 4 FEATURES SHOWCASED:
-;; - stacks-block-time: Time-locked proposal execution
-;; - contract-hash?: Verify new contract implementations before upgrade
-;; - to-ascii?: Generate human-readable proposal descriptions
+;; Clarity 3-compatible implementation (block-height timelocks)
 
 ;; Constants
 (define-constant contract-owner tx-sender)
@@ -18,7 +15,7 @@
 
 ;; Governance Parameters
 (define-constant VOTING-PERIOD u1008) ;; ~1 week in blocks
-(define-constant TIMELOCK-PERIOD u86400) ;; 24 hours in seconds
+(define-constant TIMELOCK-PERIOD u144) ;; ~24 hours in blocks
 (define-constant QUORUM-PERCENTAGE u20) ;; 20% of supply needed
 (define-constant PROPOSAL-THRESHOLD u1000000000) ;; 1000 STX to propose
 
@@ -39,7 +36,7 @@
         votes-against: uint,
         start-block: uint,
         end-block: uint,
-        execution-time: uint, ;; CLARITY 4: stacks-block-time when can execute
+        execution-time: uint, ;; Block height when can execute
         executed: bool,
         cancelled: bool,
     }
@@ -58,7 +55,7 @@
     }
 )
 
-;; CLARITY 4 FEATURE: Create proposal with time-locked execution
+;; Create proposal with time-locked execution
 ;; Proposals can only be executed after TIMELOCK-PERIOD has passed
 (define-public (create-proposal
         (title (string-ascii 100))
@@ -72,16 +69,8 @@
         ;; Check proposer has enough voting power
         (asserts! (>= voter-balance PROPOSAL-THRESHOLD) err-not-authorized)
 
-        ;; CLARITY 4: Verify target contract if provided
-        (let ((contract-hash (match target-contract
-                contract
-                (match (contract-hash? contract)
-                    hash-value (some hash-value)
-                    err none
-                )
-                none
-            )))
-            ;; Create proposal with stacks-block-time based execution delay
+        (let ((contract-hash none))
+            ;; Create proposal with block-height based execution delay
             (map-set proposals { proposal-id: proposal-id } {
                 proposer: tx-sender,
                 title: title,
@@ -92,7 +81,7 @@
                 votes-against: u0,
                 start-block: stacks-block-height,
                 end-block: (+ stacks-block-height VOTING-PERIOD),
-                execution-time: (+ stacks-block-time TIMELOCK-PERIOD),
+                execution-time: (+ stacks-block-height TIMELOCK-PERIOD),
                 executed: false,
                 cancelled: false,
             })
@@ -106,7 +95,7 @@
 )
 
 ;; Vote on a proposal
-;; CLARITY 4: Tracks vote time using stacks-block-time
+;; Tracks vote time using block height
 (define-public (vote
         (proposal-id uint)
         (vote-for bool)
@@ -139,7 +128,7 @@
         } {
             vote: vote-for,
             amount: voter-balance,
-            vote-time: stacks-block-time,
+            vote-time: stacks-block-height,
         })
 
         ;; Update proposal vote counts
@@ -160,7 +149,6 @@
     )
 )
 
-;; CLARITY 4 FEATURE: Time-locked execution with stacks-block-time
 ;; Execute a proposal after timelock period has passed
 (define-public (execute-proposal (proposal-id uint))
     (let ((proposal (unwrap! (map-get? proposals { proposal-id: proposal-id })
@@ -175,8 +163,8 @@
             err-timelock-not-expired
         )
 
-        ;; CLARITY 4: Check timelock using stacks-block-time
-        (asserts! (>= stacks-block-time (get execution-time proposal))
+        ;; Check timelock using block height
+        (asserts! (>= stacks-block-height (get execution-time proposal))
             err-timelock-not-expired
         )
 
@@ -191,21 +179,6 @@
             (asserts! quorum-met err-proposal-not-passed)
             (asserts! passed err-proposal-not-passed)
 
-            ;; CLARITY 4: Verify target contract hash if doing contract upgrade
-            (match (get target-contract proposal)
-                target (match (get new-contract-hash proposal)
-                    expected-hash
-                        (match (contract-hash? target)
-                            current-hash
-                                (asserts! (is-eq current-hash expected-hash) err-invalid-contract-hash)
-                            err
-                                (asserts! false err-invalid-contract-hash)
-                        )
-                    true
-                )
-                true
-            )
-
             ;; Mark as executed
             (map-set proposals { proposal-id: proposal-id }
                 (merge proposal { executed: true })
@@ -216,31 +189,21 @@
     )
 )
 
-;; CLARITY 4 FEATURE: to-ascii? for governance reports
-;; Get human-readable proposal status
+;; Get proposal status
 (define-read-only (get-proposal-status-ascii (proposal-id uint))
     (match (map-get? proposals { proposal-id: proposal-id })
         proposal (let (
                 (votes-for-val (get votes-for proposal))
                 (votes-against-val (get votes-against proposal))
-                (time-left (if (> (get execution-time proposal) stacks-block-time)
-                    (- (get execution-time proposal) stacks-block-time)
+                (time-left (if (> (get execution-time proposal) stacks-block-height)
+                    (- (get execution-time proposal) stacks-block-height)
                     u0
-                ))
-                (votes-for-ascii (unwrap-panic
-                    (as-max-len? (unwrap-panic (to-ascii? votes-for-val)) u20)
-                ))
-                (votes-against-ascii (unwrap-panic
-                    (as-max-len? (unwrap-panic (to-ascii? votes-against-val)) u20)
-                ))
-                (time-left-ascii (unwrap-panic
-                    (as-max-len? (unwrap-panic (to-ascii? time-left)) u20)
                 ))
                 (status (if (get executed proposal)
                     "EXECUTED"
                     (if (get cancelled proposal)
                         "CANCELLED"
-                        (if (>= stacks-block-time (get execution-time proposal))
+                        (if (>= stacks-block-height (get execution-time proposal))
                             "READY"
                             "PENDING"
                         )
@@ -249,9 +212,9 @@
             )
             (ok {
                 title: (get title proposal),
-                votes-for: votes-for-ascii,
-                votes-against: votes-against-ascii,
-                timelock-remaining: time-left-ascii,
+                votes-for: votes-for-val,
+                votes-against: votes-against-val,
+                timelock-remaining: time-left,
                 status: status,
             })
         )
@@ -276,11 +239,11 @@
 )
 
 ;; Check if proposal can be executed
-;; CLARITY 4: Uses stacks-block-time for timelock check
+;; Uses block height for timelock check
 (define-read-only (can-execute (proposal-id uint))
     (match (map-get? proposals { proposal-id: proposal-id })
         proposal (let (
-                (timelock-passed (>= stacks-block-time (get execution-time proposal)))
+                (timelock-passed (>= stacks-block-height (get execution-time proposal)))
                 (voting-ended (>= stacks-block-height (get end-block proposal)))
                 (not-executed (not (get executed proposal)))
                 (not-cancelled (not (get cancelled proposal)))

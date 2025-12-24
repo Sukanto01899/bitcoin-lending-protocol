@@ -1,17 +1,16 @@
 ;; Lending Pool Contract
 ;; =====================
-;; CLARITY 4 FEATURES SHOWCASED:
-;; - stacks-block-time: Calculate time-based interest accrual on loans
-;; - restrict-assets?: Protect pool funds when calling external liquidation contracts
-;; - contract-hash?: Verify liquidator contracts before allowing them to execute
-;; - to-ascii?: Generate human-readable loan status messages
+;; Clarity 3 implementation (mirrors behavior without Clarity 4-only features)
+;; - uses stacks-block-height for interest accrual timing
+;; - manual liquidator allowlist (no contract-hash?)
+;; - returns numeric loan status fields (no to-ascii?)
 
 ;; Import traits
-(use-trait liquidator-trait .liquidator-trait.liquidator-trait)
+(use-trait liquidator-trait-v2 .liquidator-trait-v2.liquidator-trait-v2)
 
 ;; Constants
 ;; Note: contract-owner should be set via set-admin after deployment
-(define-constant CONTRACT-ADDRESS .lending-pool)
+(define-constant CONTRACT-ADDRESS .lending-pool-v2)
 (define-constant err-owner-only (err u400))
 (define-constant err-insufficient-balance (err u401))
 (define-constant err-insufficient-collateral (err u402))
@@ -29,6 +28,7 @@
 (define-constant LIQUIDATION-BONUS u10) ;; 10% bonus for liquidators
 (define-constant INTEREST-RATE-BPS u500) ;; 5% annual interest (500 basis points)
 (define-constant MIN-HEALTH-FACTOR u120) ;; Minimum health factor before liquidation
+(define-constant BLOCKS-PER-YEAR u52560)
 
 ;; Data Variables
 (define-data-var protocol-paused bool false)
@@ -36,15 +36,15 @@
 (define-data-var total-borrows uint u0)
 (define-data-var admin principal tx-sender)
 
-;; Verified liquidator contracts (using contract-hash for verification)
-(define-data-var verified-liquidator-hash (optional (buff 32)) none)
+;; Verified liquidator contracts (manual allowlist)
+(define-data-var verified-liquidator (optional principal) none)
 
 ;; User Data Maps
 (define-map user-deposits
     { user: principal }
     {
         amount: uint,
-        deposit-time: uint, ;; CLARITY 4: Track using stacks-block-time
+        deposit-time: uint, ;; Track using block height
     }
 )
 
@@ -61,41 +61,24 @@
     {
         principal-amount: uint,
         interest-accrued: uint,
-        borrow-time: uint, ;; CLARITY 4: Using stacks-block-time
-        last-interest-update: uint, ;; CLARITY 4: Track last interest calculation
+        borrow-time: uint, ;; Using block height
+        last-interest-update: uint, ;; Track last interest calculation
     }
 )
 
-;; CLARITY 4 FEATURE: contract-hash?
 ;; Verify and register a liquidator contract
 (define-public (register-verified-liquidator (liquidator principal))
     (begin
         (asserts! (is-eq tx-sender (var-get admin)) err-owner-only)
-
-        ;; CLARITY 4: Get the hash of the liquidator contract's code
-        ;; This ensures we only interact with verified, audited liquidation logic
-        (match (contract-hash? liquidator)
-            hash-value
-                (begin
-                    (var-set verified-liquidator-hash (some hash-value))
-                    (ok hash-value)
-                )
-            err
-                err-contract-verification-failed
-        )
+        (var-set verified-liquidator (some liquidator))
+        (ok liquidator)
     )
 )
 
 ;; Verify a liquidator contract before allowing it to execute
 (define-private (is-liquidator-verified (liquidator principal))
-    (match (var-get verified-liquidator-hash)
-        expected-hash
-            (match (contract-hash? liquidator)
-                current-hash
-                    (is-eq current-hash expected-hash)
-                err
-                    false
-            )
+    (match (var-get verified-liquidator)
+        allowed (is-eq allowed liquidator)
         false
     )
 )
@@ -104,7 +87,7 @@
 (define-public (deposit (amount uint))
     (let ((current-deposit (default-to {
             amount: u0,
-            deposit-time: stacks-block-time,
+            deposit-time: stacks-block-height,
         }
             (map-get? user-deposits { user: tx-sender })
         )))
@@ -114,10 +97,10 @@
         ;; Transfer STX to contract
         (try! (stx-transfer? amount tx-sender CONTRACT-ADDRESS))
 
-        ;; CLARITY 4: Update deposit with current stacks-block-time
+        ;; Update deposit with current block height
         (map-set user-deposits { user: tx-sender } {
             amount: (+ (get amount current-deposit) amount),
-            deposit-time: stacks-block-time,
+            deposit-time: stacks-block-height,
         })
 
         ;; Update total deposits
@@ -154,22 +137,20 @@
     )
 )
 
-;; CLARITY 4 FEATURE: stacks-block-time
 ;; Calculate accrued interest based on time elapsed
 (define-read-only (calculate-current-interest (user principal))
     (match (map-get? user-loans { user: user })
         loan-data (let (
-                ;; CLARITY 4: Use stacks-block-time for precise time-based calculations
                 (last-update (get last-interest-update loan-data))
-                (time-elapsed (if (> stacks-block-time last-update)
-                    (- stacks-block-time last-update)
+                (time-elapsed (if (> stacks-block-height last-update)
+                    (- stacks-block-height last-update)
                     u0
                 ))
                 (principal-amt (get principal-amount loan-data))
-                ;; Calculate interest: (principal * rate * time) / (seconds-per-year * 10000)
+                ;; Calculate interest: (principal * rate * blocks) / (blocks-per-year * 10000)
                 (new-interest (if (> time-elapsed u0)
                     (/ (* (* principal-amt INTEREST-RATE-BPS) time-elapsed)
-                        u315360000000
+                        (* BLOCKS-PER-YEAR u10000)
                     )
                     u0
                 ))
@@ -202,17 +183,17 @@
             err-insufficient-collateral
         )
 
-        ;; CLARITY 4: Create/update loan with stacks-block-time timestamp
+        ;; Create/update loan with block height timestamp
         ;; If existing loan, preserve original borrow-time, otherwise use current time
         (let ((original-borrow-time (match existing-loan
                 loan (get borrow-time loan)
-                stacks-block-time
+                stacks-block-height
             )))
             (map-set user-loans { user: tx-sender } {
                 principal-amount: (+ current-debt amount),
                 interest-accrued: u0, ;; Interest is now part of principal
                 borrow-time: original-borrow-time,
-                last-interest-update: stacks-block-time,
+                last-interest-update: stacks-block-height,
             })
         )
 
@@ -279,7 +260,7 @@
                     principal-amount: (- total-debt amount),
                     interest-accrued: u0,
                     borrow-time: (get borrow-time loan-data),
-                    last-interest-update: stacks-block-time,
+                    last-interest-update: stacks-block-height,
                 })
                 (var-set total-borrows (- (var-get total-borrows) amount))
             )
@@ -289,11 +270,10 @@
     )
 )
 
-;; CLARITY 4 FEATURES: restrict-assets? and contract-hash?
-;; Liquidate undercollateralized position with asset protection
+;; Liquidate undercollateralized position
 (define-public (liquidate
         (borrower principal)
-        (liquidator <liquidator-trait>)
+        (liquidator <liquidator-trait-v2>)
     )
     (let (
             (loan-data (unwrap! (map-get? user-loans { user: borrower }) err-loan-not-found))
@@ -315,24 +295,17 @@
         ;; Check if position is unhealthy
         (asserts! (< health-factor MIN-HEALTH-FACTOR) err-position-healthy)
 
-        ;; CLARITY 4: Verify liquidator contract using contract-hash?
+        ;; Verify liquidator contract using allowlist
         (asserts! (is-liquidator-verified (contract-of liquidator))
             err-contract-verification-failed
         )
 
-        ;; CLARITY 4: Use restrict-assets? to protect pool funds
-        ;; This ensures the liquidator can only move the specified amount
-        ;; Note: restrict-assets? sets post-conditions that automatically enforce limits
-        (let (
-                (liquidator-contract (contract-of liquidator))
+        (let ((liquidator-contract (contract-of liquidator)))
+            (asserts! (<= liquidation-amount collateral-value)
+                err-asset-restriction-failed
             )
-            ;; Set asset restrictions - this will automatically revert if liquidator
-            ;; tries to move more STX than liquidation-amount
-            ;; Note: Actual implementation depends on Clarity 4 final specification
-            ;; For now, we validate manually before and after the call
-            (asserts! (<= liquidation-amount collateral-value) err-asset-restriction-failed)
 
-            ;; Call liquidator with asset restrictions in place
+            ;; Call liquidator
             (try! (contract-call? liquidator liquidate borrower total-debt))
 
             ;; Transfer collateral to liquidator (with bonus)
@@ -373,38 +346,29 @@
     )
 )
 
-;; CLARITY 4 FEATURE: to-ascii? for loan status
-;; Get human-readable loan status
+;; Get loan status
 (define-read-only (get-loan-status-ascii (user principal))
     (match (map-get? user-loans { user: user })
         loan-data (let (
                 (principal-amt (get principal-amount loan-data))
                 (interest-amt (unwrap-panic (calculate-current-interest user)))
                 (health (unwrap-panic (get-health-factor user)))
-                (principal-ascii (unwrap-panic
-                    (as-max-len? (unwrap-panic (to-ascii? principal-amt)) u20)
-                ))
-                (interest-ascii (unwrap-panic
-                    (as-max-len? (unwrap-panic (to-ascii? interest-amt)) u20)
-                ))
-                (health-ascii (unwrap-panic
-                    (as-max-len? (unwrap-panic (to-ascii? health)) u20)
+                (status (if (< health MIN-HEALTH-FACTOR)
+                    "LIQUIDATABLE"
+                    "HEALTHY"
                 ))
             )
             (ok {
-                principal: principal-ascii,
-                interest: interest-ascii,
-                health-factor: health-ascii,
-                status: (if (< health MIN-HEALTH-FACTOR)
-                    "LIQUIDATABLE"
-                    "HEALTHY"
-                ),
+                principal: principal-amt,
+                interest: interest-amt,
+                health-factor: health,
+                status: status,
             })
         )
         (ok {
-            principal: "0",
-            interest: "0",
-            health-factor: "0",
+            principal: u0,
+            interest: u0,
+            health-factor: u0,
             status: "NO_LOAN",
         })
     )
@@ -447,3 +411,4 @@
         (ok true)
     )
 )
+

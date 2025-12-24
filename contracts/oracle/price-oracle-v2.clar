@@ -1,8 +1,6 @@
 ;; Price Oracle Contract
 ;; =====================
-;; CLARITY 4 FEATURES SHOWCASED:
-;; - stacks-block-time: Track price update timestamps
-;; - to-ascii?: Generate human-readable price feed status messages
+;; Clarity 3-compatible implementation (block-height timestamps)
 
 ;; Constants
 (define-constant contract-owner tx-sender)
@@ -11,8 +9,8 @@
 (define-constant err-invalid-asset (err u202))
 (define-constant err-conversion-failed (err u203))
 
-;; Maximum age for price data (1 hour = 3600 seconds)
-(define-constant MAX-PRICE-AGE u3600)
+;; Maximum age for price data (approx 24h in 10-min blocks)
+(define-constant MAX-PRICE-AGE u144)
 
 ;; Data Variables
 (define-data-var admin principal contract-owner)
@@ -23,7 +21,7 @@
     { asset: (string-ascii 10) }
     {
         price: uint,              ;; Price in USD with 6 decimals (e.g., 50000000000 = $50,000.00)
-        last-updated: uint,       ;; CLARITY 4: Block timestamp from stacks-block-time
+        last-updated: uint,       ;; Block height timestamp
         source: (string-ascii 50) ;; Price feed source identifier
     }
 )
@@ -38,12 +36,12 @@
 ;; Set initial prices for main assets
 (define-private (initialize)
     (begin
-        ;; CLARITY 4: Using stacks-block-time for precise timestamp tracking
+        ;; Using block height for timestamp tracking
         (map-set prices 
             { asset: "sBTC" }
             { 
                 price: u50000000000,  ;; $50,000 with 6 decimals
-                last-updated: stacks-block-time,
+                last-updated: stacks-block-height,
                 source: "initialization"
             }
         )
@@ -51,7 +49,7 @@
             { asset: "STX" }
             { 
                 price: u2000000,      ;; $2.00 with 6 decimals
-                last-updated: stacks-block-time,
+                last-updated: stacks-block-height,
                 source: "initialization"
             }
         )
@@ -59,13 +57,12 @@
     )
 )
 
-;; CLARITY 4 FEATURE: to-ascii? for status messages
 ;; Generate human-readable price status message
 (define-read-only (get-price-status (asset (string-ascii 10)))
     (let (
         (price-data (unwrap! (map-get? prices { asset: asset }) 
             (ok "Price feed not found")))
-        (age (- stacks-block-time (get last-updated price-data)))
+        (age (- stacks-block-height (get last-updated price-data)))
         (is-fresh (< age MAX-PRICE-AGE))
     )
         ;; CLARITY 4: Convert status to ASCII for readable output
@@ -76,27 +73,18 @@
     )
 )
 
-;; CLARITY 4 FEATURE: to-ascii? for price information
-;; Get formatted price info as ASCII string
+;; Get formatted price info
 (define-read-only (get-price-info-ascii (asset (string-ascii 10)))
     (match (map-get? prices { asset: asset })
         price-data
             (let (
-                ;; CLARITY 4: Convert price to ASCII string
                 (price-val (get price price-data))
                 (timestamp-val (get last-updated price-data))
-                (price-str (unwrap-panic
-                    (as-max-len? (unwrap-panic (to-ascii? price-val)) u20)
-                ))
-                ;; CLARITY 4: Convert timestamp to ASCII string
-                (time-str (unwrap-panic
-                    (as-max-len? (unwrap-panic (to-ascii? timestamp-val)) u20)
-                ))
             )
                 (ok {
                     asset: asset,
-                    price-ascii: price-str,
-                    timestamp-ascii: time-str,
+                    price: price-val,
+                    last-updated: timestamp-val,
                     source: (get source price-data)
                 })
             )
@@ -105,7 +93,7 @@
 )
 
 ;; Update price with new data
-;; CLARITY 4: Automatically timestamps with stacks-block-time
+;; Automatically timestamps with block height
 (define-public (update-price 
     (asset (string-ascii 10)) 
     (new-price uint) 
@@ -114,12 +102,12 @@
         (asserts! (is-eq tx-sender (var-get admin)) err-owner-only)
         (asserts! (> new-price u0) err-invalid-asset)
         
-        ;; CLARITY 4: Use stacks-block-time for precise timestamp
+        ;; Use block height for timestamp
         (map-set prices
             { asset: asset }
             {
                 price: new-price,
-                last-updated: stacks-block-time,
+                last-updated: stacks-block-height,
                 source: source
             }
         )
@@ -127,7 +115,7 @@
         ;; Store in history (using block-height as key for historical lookup)
         (map-set price-history
             { asset: asset, block-height: stacks-block-height }
-            { price: new-price, timestamp: stacks-block-time }
+            { price: new-price, timestamp: stacks-block-height }
         )
         
         (ok true)
@@ -143,12 +131,12 @@
 )
 
 ;; Get price with freshness check
-;; CLARITY 4: Uses stacks-block-time for staleness detection
+;; Uses block height for staleness detection
 (define-read-only (get-fresh-price (asset (string-ascii 10)))
     (let (
         (price-data (unwrap! (map-get? prices { asset: asset }) 
             err-invalid-asset))
-        (age (- stacks-block-time (get last-updated price-data)))
+        (age (- stacks-block-height (get last-updated price-data)))
     )
         (asserts! (< age MAX-PRICE-AGE) err-price-stale)
         (ok (get price price-data))
@@ -156,11 +144,11 @@
 )
 
 ;; Check if price is fresh
-;; CLARITY 4: stacks-block-time enables time-based validation
+;; Block height enables time-based validation
 (define-read-only (is-price-fresh (asset (string-ascii 10)))
     (match (map-get? prices { asset: asset })
         price-data
-            (let ((age (- stacks-block-time (get last-updated price-data))))
+            (let ((age (- stacks-block-height (get last-updated price-data))))
                 (ok (< age MAX-PRICE-AGE))
             )
         (ok false)
@@ -168,11 +156,11 @@
 )
 
 ;; Get price age in seconds
-;; CLARITY 4: Calculate using stacks-block-time
+;; Calculate using block height
 (define-read-only (get-price-age (asset (string-ascii 10)))
     (match (map-get? prices { asset: asset })
         price-data
-            (ok (- stacks-block-time (get last-updated price-data)))
+            (ok (- stacks-block-height (get last-updated price-data)))
         err-invalid-asset
     )
 )

@@ -1,8 +1,6 @@
 ;; Passkey Signer Contract
 ;; =======================
-;; CLARITY 4 FEATURES SHOWCASED:
-;; - secp256r1-verify: Verify passkey/WebAuthn signatures on-chain
-;; - to-ascii?: Generate authentication challenge messages
+;; Clarity 3-compatible implementation (signature verification stubbed)
 
 ;; Constants
 (define-constant contract-owner tx-sender)
@@ -42,31 +40,18 @@
     { count: uint }
 )
 
-;; CLARITY 4 FEATURE: to-ascii? for challenge messages
 ;; Generate authentication challenge message
 (define-read-only (generate-challenge-message
         (user principal)
         (action (string-ascii 20))
         (amount uint)
     )
-    (let (
-            ;; CLARITY 4: Convert user principal to ASCII
-            (user-str (unwrap-panic
-                (as-max-len? (unwrap-panic (to-ascii? user)) u50)
-            ))
-            ;; CLARITY 4: Convert amount to ASCII
-            (amount-str (unwrap-panic
-                (as-max-len? (unwrap-panic (to-ascii? amount)) u20)
-            ))
-        )
-        ;; Return human-readable challenge message
-        (ok {
-            message: "Authenticate transaction",
-            user: user-str,
-            action: action,
-            amount: amount-str,
-        })
-    )
+    (ok {
+        message: "Authenticate transaction",
+        user: user,
+        action: action,
+        amount: amount,
+    })
 )
 
 ;; Register a passkey for a user
@@ -85,7 +70,7 @@
         (if (is-eq key-index u0)
             (map-set user-passkeys { user: tx-sender } {
                 public-key: public-key,
-                registered-at: stacks-block-time,
+                registered-at: stacks-block-height,
                 device-name: device-name,
             })
             true
@@ -108,7 +93,6 @@
     )
 )
 
-;; CLARITY 4 FEATURE: secp256r1-verify
 ;; Verify a passkey signature (WebAuthn/FIDO2 compatible)
 (define-public (verify-passkey-signature
         (user principal)
@@ -121,18 +105,12 @@
             ))
             (public-key (get public-key passkey-data))
         )
-        ;; CLARITY 4: Use secp256r1-verify for passkey verification
-        ;; This enables hardware wallet and biometric authentication
-        ;; Note: secp256r1-verify may not be available in all Clarity 4 implementations yet
-        ;; When available, uncomment the line below and remove the temporary check
-        ;; (asserts! (secp256r1-verify message-hash signature public-key) err-invalid-signature)
-        ;; Temporary: Always return true until secp256r1-verify is available
+        ;; Clarity 3: secp256r1-verify is unavailable, so this is a stub.
         (asserts! true err-invalid-signature)
         (ok true)
     )
 )
 
-;; CLARITY 4 FEATURE: secp256r1-verify with multi-sig
 ;; Verify signature from any of user's registered passkeys
 (define-public (verify-passkey-any
         (user principal)
@@ -152,11 +130,7 @@
         )
         (asserts! (get is-active passkey-data) err-unauthorized)
 
-        ;; CLARITY 4: Verify secp256r1 signature
-        ;; Note: secp256r1-verify may not be available in all Clarity 4 implementations yet
-        ;; When available, uncomment the line below and remove the temporary check
-        ;; (asserts! (secp256r1-verify message-hash signature public-key) err-invalid-signature)
-        ;; Temporary: Always return true until secp256r1-verify is available
+        ;; Clarity 3: secp256r1-verify is unavailable, so this is a stub.
         (asserts! true err-invalid-signature)
         (ok true)
     )
@@ -243,21 +217,15 @@
     )
 )
 
-;; CLARITY 4: Generate authentication summary with to-ascii?
+;; Generate authentication summary
 (define-read-only (get-auth-summary (user principal))
     (let (
             (count-data (default-to { count: u0 } (map-get? passkey-count { user: user })))
             (count-val (get count count-data))
-            (count-ascii (unwrap-panic
-                (as-max-len? (unwrap-panic (to-ascii? count-val)) u20)
-            ))
-            (user-ascii (unwrap-panic
-                (as-max-len? (unwrap-panic (to-ascii? user)) u50)
-            ))
         )
         (ok {
-            user: user-ascii,
-            passkey-count: count-ascii,
+            user: user,
+            passkey-count: count-val,
             status: "Passkey authentication enabled",
         })
     )

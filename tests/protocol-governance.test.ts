@@ -7,13 +7,13 @@ function getAddress(name: string): string {
   return address;
 }
 
-describe("protocol-governance", () => {
+describe("protocol-governance-v2", () => {
   it("creates proposals and records votes", () => {
     const proposer = getAddress("wallet_1");
     const voter = getAddress("wallet_2");
 
     const create = simnet.callPublicFn(
-      "protocol-governance",
+      "protocol-governance-v2",
       "create-proposal",
       [
         Cl.stringAscii("Upgrade"),
@@ -27,7 +27,7 @@ describe("protocol-governance", () => {
     const proposalId = BigInt(createJson.value.value);
 
     const vote = simnet.callPublicFn(
-      "protocol-governance",
+      "protocol-governance-v2",
       "vote",
       [Cl.uint(proposalId), Cl.bool(true)],
       voter,
@@ -35,7 +35,7 @@ describe("protocol-governance", () => {
     expect(vote.result).toBeOk(Cl.bool(true));
 
     const doubleVote = simnet.callPublicFn(
-      "protocol-governance",
+      "protocol-governance-v2",
       "vote",
       [Cl.uint(proposalId), Cl.bool(true)],
       voter,
@@ -43,7 +43,7 @@ describe("protocol-governance", () => {
     expect(doubleVote.result).toBeErr(Cl.uint(602));
 
     const userVote = simnet.callReadOnlyFn(
-      "protocol-governance",
+      "protocol-governance-v2",
       "get-user-vote",
       [Cl.uint(proposalId), Cl.principal(voter)],
       voter,
@@ -58,7 +58,7 @@ describe("protocol-governance", () => {
     const stranger = getAddress("wallet_4");
 
     const create = simnet.callPublicFn(
-      "protocol-governance",
+      "protocol-governance-v2",
       "create-proposal",
       [
         Cl.stringAscii("Param change"),
@@ -72,7 +72,7 @@ describe("protocol-governance", () => {
     const proposalId = BigInt(createJson.value.value);
 
     const executeEarly = simnet.callPublicFn(
-      "protocol-governance",
+      "protocol-governance-v2",
       "execute-proposal",
       [Cl.uint(proposalId)],
       proposer,
@@ -80,7 +80,7 @@ describe("protocol-governance", () => {
     expect(executeEarly.result).toBeErr(Cl.uint(604));
 
     const cancelByStranger = simnet.callPublicFn(
-      "protocol-governance",
+      "protocol-governance-v2",
       "cancel-proposal",
       [Cl.uint(proposalId)],
       stranger,
@@ -88,7 +88,7 @@ describe("protocol-governance", () => {
     expect(cancelByStranger.result).toBeErr(Cl.uint(600));
 
     const cancel = simnet.callPublicFn(
-      "protocol-governance",
+      "protocol-governance-v2",
       "cancel-proposal",
       [Cl.uint(proposalId)],
       proposer,
@@ -96,3 +96,4 @@ describe("protocol-governance", () => {
     expect(cancel.result).toBeOk(Cl.bool(true));
   });
 });
+

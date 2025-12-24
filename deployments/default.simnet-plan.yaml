@@ -64,48 +64,48 @@ plan:
     - id: 0
       transactions:
         - emulated-contract-publish:
-            contract-name: liquidator-trait
+            contract-name: liquidator-trait-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/traits/liquidator-trait.clar
-            clarity-version: 4
+            path: contracts/traits/liquidator-trait-v2.clar
+            clarity-version: 3
         - emulated-contract-publish:
-            contract-name: lending-pool
+            contract-name: lending-pool-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/lending-pool.clar
-            clarity-version: 4
+            path: contracts/lending-pool-v2.clar
+            clarity-version: 3
         - emulated-contract-publish:
-            contract-name: lending-pool-trait
+            contract-name: lending-pool-v2-trait
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/traits/lending-pool-trait.clar
-            clarity-version: 4
+            path: contracts/traits/lending-pool-v2-trait.clar
+            clarity-version: 3
         - emulated-contract-publish:
-            contract-name: math-helpers
+            contract-name: math-helpers-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/utils/math-helpers.clar
-            clarity-version: 4
+            path: contracts/utils/math-helpers-v2.clar
+            clarity-version: 3
         - emulated-contract-publish:
-            contract-name: passkey-signer
+            contract-name: passkey-signer-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/auth/passkey-signer.clar
-            clarity-version: 4
+            path: contracts/auth/passkey-signer-v2.clar
+            clarity-version: 3
         - emulated-contract-publish:
-            contract-name: price-oracle
+            contract-name: price-oracle-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/oracle/price-oracle.clar
-            clarity-version: 4
+            path: contracts/oracle/price-oracle-v2.clar
+            clarity-version: 3
         - emulated-contract-publish:
-            contract-name: protocol-governance
+            contract-name: protocol-governance-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/governance/protocol-governance.clar
-            clarity-version: 4
+            path: contracts/governance/protocol-governance-v2.clar
+            clarity-version: 3
         - emulated-contract-publish:
-            contract-name: simple-liquidator
+            contract-name: simple-liquidator-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/liquidators/simple-liquidator.clar
-            clarity-version: 4
+            path: contracts/liquidators/simple-liquidator-v2.clar
+            clarity-version: 3
         - emulated-contract-publish:
-            contract-name: test-ref
+            contract-name: test-ref-v2
             emulated-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
-            path: contracts/test-ref.clar
-            clarity-version: 4
+            path: contracts/test-ref-v2.clar
+            clarity-version: 3
       epoch: "3.3"

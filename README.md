@@ -4,30 +4,30 @@ Smart contracts for a Stacks testnet lending protocol. The system includes a len
 
 ## Contracts
 
-- `contracts/lending-pool.clar`
+- `contracts/lending-pool-v2.clar`
   - Core pool: deposit, withdraw, add-collateral, borrow, repay
   - Interest accrual uses `stacks-block-time`
   - Liquidation uses `contract-hash?` verification and `restrict-assets?` safety checks
   - Admin controls: pause and set admin
-- `contracts/oracle/price-oracle.clar`
+- `contracts/oracle/price-oracle-v2.clar`
   - Admin-updated prices with freshness checks
   - Price history for auditability
   - Human-readable status via `to-ascii?`
-- `contracts/governance/protocol-governance.clar`
+- `contracts/governance/protocol-governance-v2.clar`
   - Proposal creation, voting, and timelocked execution
   - Quorum and threshold checks
   - Contract upgrade verification via `contract-hash?`
-- `contracts/auth/passkey-signer.clar`
+- `contracts/auth/passkey-signer-v2.clar`
   - Passkey registration and multi-passkey management
   - On-chain signature verification stub for `secp256r1-verify`
   - Human-readable challenge messages
-- `contracts/liquidators/simple-liquidator.clar`
-  - Implements `liquidator-trait` and returns liquidation bonus
+- `contracts/liquidators/simple-liquidator-v2.clar`
+  - Implements `liquidator-trait-v2` and returns liquidation bonus
 - Traits
-  - `contracts/traits/lending-pool-trait.clar`
-  - `contracts/traits/liquidator-trait.clar`
+  - `contracts/traits/lending-pool-v2-trait.clar`
+  - `contracts/traits/liquidator-trait-v2.clar`
 - Utilities
-  - `contracts/utils/math-helpers.clar`
+  - `contracts/utils/math-helpers-v2.clar`
 
 ## Key Parameters (Lending Pool)
 
@@ -90,3 +90,4 @@ The frontend reads testnet defaults from `frontend/.env.local`:
 - `VITE_PRICE_ORACLE_CONTRACT`
 - `VITE_GOVERNANCE_CONTRACT`
 - `VITE_PASSKEY_CONTRACT`
+
