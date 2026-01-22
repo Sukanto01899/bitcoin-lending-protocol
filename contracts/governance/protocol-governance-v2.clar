@@ -81,7 +81,7 @@
                 votes-against: u0,
                 start-block: stacks-block-height,
                 end-block: (+ stacks-block-height VOTING-PERIOD),
-                execution-time: (+ stacks-block-height TIMELOCK-PERIOD),
+                execution-time: (+ (+ stacks-block-height VOTING-PERIOD) TIMELOCK-PERIOD),
                 executed: false,
                 cancelled: false,
             })

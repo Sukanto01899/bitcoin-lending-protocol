@@ -61,7 +61,7 @@
 (define-read-only (get-price-status (asset (string-ascii 10)))
     (let (
         (price-data (unwrap! (map-get? prices { asset: asset }) 
-            (ok "Price feed not found")))
+            err-invalid-asset))
         (age (- stacks-block-height (get last-updated price-data)))
         (is-fresh (< age MAX-PRICE-AGE))
     )

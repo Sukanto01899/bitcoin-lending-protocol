@@ -171,14 +171,15 @@
             (current-collateral (get amount user-coll))
             (max-borrow (/ (* current-collateral u100) COLLATERAL-RATIO))
             (existing-loan (map-get? user-loans { user: tx-sender }))
-            (current-debt (match existing-loan
-                loan (+ (get principal-amount loan)
-                    (unwrap-panic (calculate-current-interest tx-sender))
-                )
+            (current-principal (match existing-loan
+                loan (get principal-amount loan)
                 u0
             ))
+            (current-interest (unwrap-panic (calculate-current-interest tx-sender)))
+            (current-debt (+ current-principal current-interest))
         )
         (asserts! (not (var-get protocol-paused)) err-paused)
+        (asserts! (> amount u0) err-invalid-amount)
         (asserts! (<= (+ current-debt amount) max-borrow)
             err-insufficient-collateral
         )
@@ -190,8 +191,8 @@
                 stacks-block-height
             )))
             (map-set user-loans { user: tx-sender } {
-                principal-amount: (+ current-debt amount),
-                interest-accrued: u0, ;; Interest is now part of principal
+                principal-amount: (+ current-principal amount),
+                interest-accrued: current-interest,
                 borrow-time: original-borrow-time,
                 last-interest-update: stacks-block-height,
             })
@@ -239,9 +240,11 @@
     (let (
             (loan-data (unwrap! (map-get? user-loans { user: tx-sender }) err-loan-not-found))
             (current-interest (unwrap-panic (calculate-current-interest tx-sender)))
+            (principal-amt (get principal-amount loan-data))
             (total-debt (+ (get principal-amount loan-data) current-interest))
         )
         (asserts! (not (var-get protocol-paused)) err-paused)
+        (asserts! (> amount u0) err-invalid-amount)
         (asserts! (<= amount total-debt) err-invalid-amount)
 
         ;; Transfer repayment
@@ -252,17 +255,31 @@
             ;; Full repayment - delete loan
             (begin
                 (map-delete user-loans { user: tx-sender })
-                (var-set total-borrows (- (var-get total-borrows) total-debt))
+                (var-set total-borrows (- (var-get total-borrows) principal-amt))
             )
             ;; Partial repayment - update loan
-            (begin
+            (let (
+                    (interest-paid (if (>= amount current-interest)
+                        current-interest
+                        amount
+                    ))
+                    (remaining-interest (- current-interest interest-paid))
+                    (principal-paid (if (> amount current-interest)
+                        (- amount current-interest)
+                        u0
+                    ))
+                    (remaining-principal (- principal-amt principal-paid))
+                )
                 (map-set user-loans { user: tx-sender } {
-                    principal-amount: (- total-debt amount),
-                    interest-accrued: u0,
+                    principal-amount: remaining-principal,
+                    interest-accrued: remaining-interest,
                     borrow-time: (get borrow-time loan-data),
                     last-interest-update: stacks-block-height,
                 })
-                (var-set total-borrows (- (var-get total-borrows) amount))
+                (if (> principal-paid u0)
+                    (var-set total-borrows (- (var-get total-borrows) principal-paid))
+                    true
+                )
             )
         )
 
@@ -283,6 +300,7 @@
             (total-debt (+ (get principal-amount loan-data)
                 (unwrap-panic (calculate-current-interest borrower))
             ))
+            (principal-amt (get principal-amount loan-data))
             (collateral-value (get amount collateral-data))
             (health-factor (if (is-eq total-debt u0)
                 u0
@@ -318,7 +336,7 @@
             (map-delete user-collateral { user: borrower })
 
             ;; Update total borrows
-            (var-set total-borrows (- (var-get total-borrows) total-debt))
+            (var-set total-borrows (- (var-get total-borrows) principal-amt))
 
             (ok true)
         )
@@ -411,4 +429,3 @@
         (ok true)
     )
 )
-
