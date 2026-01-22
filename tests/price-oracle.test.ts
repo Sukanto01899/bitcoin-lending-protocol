@@ -7,12 +7,12 @@ function getAddress(name: string): string {
   return address;
 }
 
-describe("price-oracle-v2", () => {
+describe("price-oracle-v3", () => {
   it("returns initial prices and status", () => {
     const user = getAddress("wallet_1");
 
     const price = simnet.callReadOnlyFn(
-      "price-oracle-v2",
+      "price-oracle-v3",
       "get-price",
       [Cl.stringAscii("sBTC")],
       user,
@@ -20,7 +20,7 @@ describe("price-oracle-v2", () => {
     expect(price.result).toBeOk(Cl.uint(50_000_000_000));
 
     const status = simnet.callReadOnlyFn(
-      "price-oracle-v2",
+      "price-oracle-v3",
       "get-price-status",
       [Cl.stringAscii("sBTC")],
       user,
@@ -35,7 +35,7 @@ describe("price-oracle-v2", () => {
     const user = getAddress("wallet_2");
 
     const update = simnet.callPublicFn(
-      "price-oracle-v2",
+      "price-oracle-v3",
       "update-price",
       [Cl.stringAscii("sBTC"), Cl.uint(55_000_000_000), Cl.stringAscii("test-feed")],
       admin,
@@ -43,7 +43,7 @@ describe("price-oracle-v2", () => {
     expect(update.result).toBeOk(Cl.bool(true));
 
     const price = simnet.callReadOnlyFn(
-      "price-oracle-v2",
+      "price-oracle-v3",
       "get-price",
       [Cl.stringAscii("sBTC")],
       user,
@@ -51,7 +51,7 @@ describe("price-oracle-v2", () => {
     expect(price.result).toBeOk(Cl.uint(55_000_000_000));
 
     const updateDenied = simnet.callPublicFn(
-      "price-oracle-v2",
+      "price-oracle-v3",
       "update-price",
       [Cl.stringAscii("sBTC"), Cl.uint(60_000_000_000), Cl.stringAscii("rogue")],
       user,

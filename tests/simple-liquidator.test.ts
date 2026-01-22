@@ -7,23 +7,23 @@ function getAddress(name: string): string {
   return address;
 }
 
-describe("simple-liquidator-v2", () => {
+describe("simple-liquidator-v3", () => {
   it("calculates liquidation bonus and supports the trait", () => {
     const caller = getAddress("wallet_1");
 
     const liquidate = simnet.callPublicFn(
-      "simple-liquidator-v2",
+      "simple-liquidator-v3",
       "liquidate",
       [Cl.principal(caller), Cl.uint(10_000)],
       caller,
     );
     expect(liquidate.result).toBeOk(Cl.uint(11_000));
 
-    const bonus = simnet.callPublicFn("simple-liquidator-v2", "get-liquidation-bonus", [], caller);
+    const bonus = simnet.callPublicFn("simple-liquidator-v3", "get-liquidation-bonus", [], caller);
     expect(bonus.result).toBeOk(Cl.uint(1000));
 
     const canLiquidate = simnet.callPublicFn(
-      "simple-liquidator-v2",
+      "simple-liquidator-v3",
       "can-liquidate",
       [Cl.principal(caller)],
       caller,
@@ -31,7 +31,7 @@ describe("simple-liquidator-v2", () => {
     expect(canLiquidate.result).toBeOk(Cl.bool(true));
 
     const bonusReadOnly = simnet.callReadOnlyFn(
-      "simple-liquidator-v2",
+      "simple-liquidator-v3",
       "get-bonus-amount",
       [Cl.uint(10_000)],
       caller,

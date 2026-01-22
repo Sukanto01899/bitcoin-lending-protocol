@@ -30,10 +30,10 @@ const appDetails = {
 
 const reownProjectId = import.meta.env.VITE_REOWN_PROJECT_ID as string | undefined;
 const envDeployer = (import.meta.env.VITE_CONTRACT_DEPLOYER as string | undefined) || "";
-const envLendingPool = (import.meta.env.VITE_LENDING_POOL_CONTRACT as string | undefined) || "lending-pool-v2";
-const envPriceOracle = (import.meta.env.VITE_PRICE_ORACLE_CONTRACT as string | undefined) || "price-oracle-v2";
-const envGovernance = (import.meta.env.VITE_GOVERNANCE_CONTRACT as string | undefined) || "protocol-governance-v2";
-const envPasskey = (import.meta.env.VITE_PASSKEY_CONTRACT as string | undefined) || "passkey-signer-v2";
+const envLendingPool = (import.meta.env.VITE_LENDING_POOL_CONTRACT as string | undefined) || "lending-pool-v3";
+const envPriceOracle = (import.meta.env.VITE_PRICE_ORACLE_CONTRACT as string | undefined) || "price-oracle-v3";
+const envGovernance = (import.meta.env.VITE_GOVERNANCE_CONTRACT as string | undefined) || "protocol-governance-v3";
+const envPasskey = (import.meta.env.VITE_PASSKEY_CONTRACT as string | undefined) || "passkey-signer-v3";
 
 const menuItems = ["Lend", "Borrow", "Governance", "Features"] as const;
 type MenuItem = (typeof menuItems)[number];

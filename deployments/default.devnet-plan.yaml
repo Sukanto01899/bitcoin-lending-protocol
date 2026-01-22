@@ -9,66 +9,66 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: liquidator-trait-v2
+            contract-name: liquidator-trait-v3
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 5850
-            path: "contracts\\traits\\liquidator-trait-v2.clar"
+            path: "contracts\\traits\\liquidator-trait-v3.clar"
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: lending-pool-v2
+            contract-name: lending-pool-v3
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 137310
-            path: "contracts\\lending-pool-v2.clar"
+            path: "contracts\\lending-pool-v3.clar"
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: lending-pool-v2-trait
+            contract-name: lending-pool-v3-trait
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 7920
-            path: "contracts\\traits\\lending-pool-v2-trait.clar"
+            path: "contracts\\traits\\lending-pool-v3-trait.clar"
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: math-helpers-v2
+            contract-name: math-helpers-v3
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 23420
-            path: "contracts\\utils\\math-helpers-v2.clar"
+            path: "contracts\\utils\\math-helpers-v3.clar"
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: passkey-signer-v2
+            contract-name: passkey-signer-v3
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 64940
-            path: "contracts\\auth\\passkey-signer-v2.clar"
+            path: "contracts\\auth\\passkey-signer-v3.clar"
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: price-oracle-v2
+            contract-name: price-oracle-v3
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 56630
-            path: "contracts\\oracle\\price-oracle-v2.clar"
+            path: "contracts\\oracle\\price-oracle-v3.clar"
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: protocol-governance-v2
+            contract-name: protocol-governance-v3
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 95940
-            path: "contracts\\governance\\protocol-governance-v2.clar"
+            path: "contracts\\governance\\protocol-governance-v3.clar"
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: simple-liquidator-v2
+            contract-name: simple-liquidator-v3
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 21270
-            path: "contracts\\liquidators\\simple-liquidator-v2.clar"
+            path: "contracts\\liquidators\\simple-liquidator-v3.clar"
             anchor-block-only: true
             clarity-version: 3
         - contract-publish:
-            contract-name: test-ref-v2
+            contract-name: test-ref-v3
             expected-sender: ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM
             cost: 430
-            path: "contracts\\test-ref-v2.clar"
+            path: "contracts\\test-ref-v3.clar"
             anchor-block-only: true
             clarity-version: 3
       epoch: "3.3"
