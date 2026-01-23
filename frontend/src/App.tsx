@@ -74,11 +74,11 @@ function App() {
     health: "0",
   });
   const [forms, setForms] = useState({
-    deposit: "0",
-    withdraw: "0",
-    collateral: "0",
-    borrow: "0",
-    repay: "0",
+    deposit: "",
+    withdraw: "",
+    collateral: "",
+    borrow: "",
+    repay: "",
   });
 
   useEffect(() => {
@@ -125,6 +125,38 @@ function App() {
 
   const updateForm = (key: keyof typeof forms, value: string) => {
     setForms((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const parseAmount = (value: string) => Number(value);
+  const isPositiveAmount = (value: string) => parseAmount(value) > 0;
+
+  const unwrapResponse = (json: any) => {
+    if (!json) return null;
+    if (json.type === "response") {
+      return json.value?.type === "ok" ? json.value.value : null;
+    }
+    return json.value ?? json;
+  };
+
+  const unwrapOptional = (json: any) => {
+    if (!json) return null;
+    if (json.type === "optional") return json.value ?? null;
+    if (json.type === "some") return json.value ?? null;
+    return json;
+  };
+
+  const unwrapTuple = (json: any) => {
+    if (!json) return null;
+    if (json.type === "tuple") return json.value ?? null;
+    return json.value ?? json;
+  };
+
+  const readUint = (json: any) => {
+    if (!json) return "0";
+    if (typeof json === "string") return json;
+    if (json.type === "uint" || json.type === "int") return json.value ?? "0";
+    if (typeof json.value === "string") return json.value;
+    return "0";
   };
 
   const connectWallet = async () => {
@@ -181,10 +213,14 @@ function App() {
         appDetails,
         stxAddress: stxAddress || undefined,
         anchorMode: AnchorMode.Any,
-        postConditionMode: PostConditionMode.Deny,
+        postConditionMode: PostConditionMode.Allow,
         onFinish: (data) => {
           setStatus(`Transaction submitted: ${data.txId}`);
           setBusyAction(null);
+          void refreshStats();
+          if (stxAddress) {
+            void refreshPosition();
+          }
         },
         onCancel: () => {
           setStatus("Transaction canceled.");
@@ -225,8 +261,8 @@ function App() {
       const borrowsJson = cvToJSON(totalBorrowsCv);
 
       setStats({
-        totalDeposits: depositsJson.value.value || "0",
-        totalBorrows: borrowsJson.value.value || "0",
+        totalDeposits: readUint(unwrapResponse(depositsJson)),
+        totalBorrows: readUint(unwrapResponse(borrowsJson)),
       });
       setStatus("Pool stats updated.");
     } catch (error) {
@@ -283,11 +319,15 @@ function App() {
       const loanJson = cvToJSON(loanCv);
       const healthJson = cvToJSON(healthCv);
 
+      const depositTuple = unwrapTuple(unwrapOptional(unwrapResponse(depositJson)));
+      const collateralTuple = unwrapTuple(unwrapOptional(unwrapResponse(collateralJson)));
+      const loanTuple = unwrapTuple(unwrapOptional(unwrapResponse(loanJson)));
+
       setPosition({
-        deposit: depositJson.value?.value?.value?.amount?.value || "0",
-        collateral: collateralJson.value?.value?.value?.amount?.value || "0",
-        loan: loanJson.value?.value?.value?.["principal-amount"]?.value || "0",
-        health: healthJson.value?.value || "0",
+        deposit: readUint(depositTuple?.amount),
+        collateral: readUint(collateralTuple?.amount),
+        loan: readUint(loanTuple?.["principal-amount"]),
+        health: readUint(unwrapResponse(healthJson)),
       });
       setStatus("Position updated.");
     } catch (error) {
@@ -436,10 +476,14 @@ function App() {
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "deposit"}
-                    onClick={() =>
-                      submitCall("deposit", "deposit", [uintCV(Number(forms.deposit))])
-                    }
+                    disabled={busyAction === "deposit" || !isPositiveAmount(forms.deposit)}
+                    onClick={() => {
+                      if (!isPositiveAmount(forms.deposit)) {
+                        setStatus("Enter a positive deposit amount.");
+                        return;
+                      }
+                      submitCall("deposit", "deposit", [uintCV(parseAmount(forms.deposit))]);
+                    }}
                   >
                     {busyAction === "deposit" ? "Pending..." : "Deposit"}
                   </button>
@@ -455,10 +499,14 @@ function App() {
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "withdraw"}
-                    onClick={() =>
-                      submitCall("withdraw", "withdraw", [uintCV(Number(forms.withdraw))])
-                    }
+                    disabled={busyAction === "withdraw" || !isPositiveAmount(forms.withdraw)}
+                    onClick={() => {
+                      if (!isPositiveAmount(forms.withdraw)) {
+                        setStatus("Enter a positive withdraw amount.");
+                        return;
+                      }
+                      submitCall("withdraw", "withdraw", [uintCV(parseAmount(forms.withdraw))]);
+                    }}
                   >
                     {busyAction === "withdraw" ? "Pending..." : "Withdraw"}
                   </button>
@@ -474,13 +522,17 @@ function App() {
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "collateral"}
-                    onClick={() =>
+                    disabled={busyAction === "collateral" || !isPositiveAmount(forms.collateral)}
+                    onClick={() => {
+                      if (!isPositiveAmount(forms.collateral)) {
+                        setStatus("Enter a positive collateral amount.");
+                        return;
+                      }
                       submitCall("collateral", "add-collateral", [
-                        uintCV(Number(forms.collateral)),
+                        uintCV(parseAmount(forms.collateral)),
                         stringAsciiCV("STX"),
-                      ])
-                    }
+                      ]);
+                    }}
                   >
                     {busyAction === "collateral" ? "Pending..." : "Add collateral"}
                   </button>
@@ -550,10 +602,14 @@ function App() {
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "borrow"}
-                    onClick={() =>
-                      submitCall("borrow", "borrow", [uintCV(Number(forms.borrow))])
-                    }
+                    disabled={busyAction === "borrow" || !isPositiveAmount(forms.borrow)}
+                    onClick={() => {
+                      if (!isPositiveAmount(forms.borrow)) {
+                        setStatus("Enter a positive borrow amount.");
+                        return;
+                      }
+                      submitCall("borrow", "borrow", [uintCV(parseAmount(forms.borrow))]);
+                    }}
                   >
                     {busyAction === "borrow" ? "Pending..." : "Borrow"}
                   </button>
@@ -569,10 +625,14 @@ function App() {
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "repay"}
-                    onClick={() =>
-                      submitCall("repay", "repay", [uintCV(Number(forms.repay))])
-                    }
+                    disabled={busyAction === "repay" || !isPositiveAmount(forms.repay)}
+                    onClick={() => {
+                      if (!isPositiveAmount(forms.repay)) {
+                        setStatus("Enter a positive repay amount.");
+                        return;
+                      }
+                      submitCall("repay", "repay", [uintCV(parseAmount(forms.repay))]);
+                    }}
                   >
                     {busyAction === "repay" ? "Pending..." : "Repay"}
                   </button>

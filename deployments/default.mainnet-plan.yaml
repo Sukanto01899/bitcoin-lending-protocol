@@ -1,0 +1,74 @@
+---
+id: 0
+name: Mainnet deployment
+network: mainnet
+stacks-node: "https://api.hiro.so"
+bitcoin-node: "http://blockstack:blockstacksystem@bitcoin.blockstack.com:8332"
+plan:
+  batches:
+    - id: 0
+      transactions:
+        - contract-publish:
+            contract-name: liquidator-trait-v3
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 1208433
+            path: "contracts\\traits\\liquidator-trait-v3.clar"
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: lending-pool-v3
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 1211745
+            path: "contracts\\lending-pool-v3.clar"
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: lending-pool-v3-trait
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 1208483
+            path: "contracts\\traits\\lending-pool-v3-trait.clar"
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: math-helpers-v3
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 1208878
+            path: "contracts\\utils\\math-helpers-v3.clar"
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: passkey-signer-v3
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 1209867
+            path: "contracts\\auth\\passkey-signer-v3.clar"
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: price-oracle-v3
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 1209669
+            path: "contracts\\oracle\\price-oracle-v3.clar"
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: protocol-governance-v3
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 1210559
+            path: "contracts\\governance\\protocol-governance-v3.clar"
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: simple-liquidator-v3
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 1208829
+            path: "contracts\\liquidators\\simple-liquidator-v3.clar"
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: test-ref-v3
+            expected-sender: SP1G4ZDXED8XM2XJ4Q4GJ7F4PG4EJQ1KKXRCD0S3K
+            cost: 970927
+            path: "contracts\\test-ref-v3.clar"
+            anchor-block-only: true
+            clarity-version: 3
+      epoch: "3.3"
