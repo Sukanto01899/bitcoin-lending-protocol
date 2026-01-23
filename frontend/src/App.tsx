@@ -16,13 +16,15 @@ import {
   uintCV,
   principalCV,
 } from "@stacks/transactions-v6";
-import { STACKS_TESTNET } from "@stacks/network";
+import { STACKS_MAINNET, STACKS_TESTNET } from "@stacks/network";
 import { createAppKit } from "@reown/appkit";
 import { EthersAdapter } from "@reown/appkit-adapter-ethers";
 import { sepolia } from "@reown/appkit/networks";
 import "./App.css";
 
-const stacksNetwork = STACKS_TESTNET;
+const stacksNetworkName = (import.meta.env.VITE_STACKS_NETWORK as string | undefined) || "testnet";
+const stacksNetwork = stacksNetworkName === "mainnet" ? STACKS_MAINNET : STACKS_TESTNET;
+const networkLabel = stacksNetworkName === "mainnet" ? "Stacks Mainnet" : "Stacks Testnet";
 const appDetails = {
   name: "Bitcoin Lending Protocol",
   icon: "https://appkit.reown.com/favicon.ico",
@@ -127,8 +129,15 @@ function App() {
     setForms((prev) => ({ ...prev, [key]: value }));
   };
 
+  const MICROSTX_FACTOR = 1_000_000;
   const parseAmount = (value: string) => Number(value);
-  const isPositiveAmount = (value: string) => parseAmount(value) > 0;
+  const toMicroStx = (value: string) => Math.round(parseAmount(value) * MICROSTX_FACTOR);
+  const isPositiveAmount = (value: string) => {
+    const amount = parseAmount(value);
+    return Number.isFinite(amount) && amount > 0;
+  };
+  const isValidMicroStx = (value: string) =>
+    isPositiveAmount(value) && Number.isInteger(toMicroStx(value)) && toMicroStx(value) > 0;
 
   const unwrapResponse = (json: any) => {
     if (!json) return null;
@@ -167,7 +176,7 @@ function App() {
     setStatus("Connecting wallet...");
     try {
       await connect({
-        network: "testnet",
+        network: stacksNetworkName === "mainnet" ? "mainnet" : "testnet",
         walletConnect: {
           projectId: reownProjectId,
           metadata: {
@@ -377,7 +386,7 @@ function App() {
       <header className="topbar">
         <div>
           <p className="eyebrow">Bitcoin Lending Protocol</p>
-          <h1>Stacks Testnet Lending Desk</h1>
+          <h1>{networkLabel} Lending Desk</h1>
           <p className="subhead">
             Deposit STX, post collateral, and borrow against your position. Built for
             protocol operators and early testers.
@@ -397,7 +406,7 @@ function App() {
       <section className="status-bar">
         <div>
           <span>Network</span>
-          <strong>Stacks Testnet</strong>
+          <strong>{networkLabel}</strong>
         </div>
         <div>
           <span>Contracts</span>
@@ -471,18 +480,19 @@ function App() {
                   <input
                     type="number"
                     min="0"
+                    step="0.000001"
                     value={forms.deposit}
                     onChange={(event) => updateForm("deposit", event.target.value)}
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "deposit" || !isPositiveAmount(forms.deposit)}
+                    disabled={busyAction === "deposit" || !isValidMicroStx(forms.deposit)}
                     onClick={() => {
-                      if (!isPositiveAmount(forms.deposit)) {
-                        setStatus("Enter a positive deposit amount.");
+                      if (!isValidMicroStx(forms.deposit)) {
+                        setStatus("Enter a positive amount with up to 6 decimals.");
                         return;
                       }
-                      submitCall("deposit", "deposit", [uintCV(parseAmount(forms.deposit))]);
+                      submitCall("deposit", "deposit", [uintCV(toMicroStx(forms.deposit))]);
                     }}
                   >
                     {busyAction === "deposit" ? "Pending..." : "Deposit"}
@@ -494,18 +504,19 @@ function App() {
                   <input
                     type="number"
                     min="0"
+                    step="0.000001"
                     value={forms.withdraw}
                     onChange={(event) => updateForm("withdraw", event.target.value)}
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "withdraw" || !isPositiveAmount(forms.withdraw)}
+                    disabled={busyAction === "withdraw" || !isValidMicroStx(forms.withdraw)}
                     onClick={() => {
-                      if (!isPositiveAmount(forms.withdraw)) {
-                        setStatus("Enter a positive withdraw amount.");
+                      if (!isValidMicroStx(forms.withdraw)) {
+                        setStatus("Enter a positive amount with up to 6 decimals.");
                         return;
                       }
-                      submitCall("withdraw", "withdraw", [uintCV(parseAmount(forms.withdraw))]);
+                      submitCall("withdraw", "withdraw", [uintCV(toMicroStx(forms.withdraw))]);
                     }}
                   >
                     {busyAction === "withdraw" ? "Pending..." : "Withdraw"}
@@ -517,19 +528,20 @@ function App() {
                   <input
                     type="number"
                     min="0"
+                    step="0.000001"
                     value={forms.collateral}
                     onChange={(event) => updateForm("collateral", event.target.value)}
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "collateral" || !isPositiveAmount(forms.collateral)}
+                    disabled={busyAction === "collateral" || !isValidMicroStx(forms.collateral)}
                     onClick={() => {
-                      if (!isPositiveAmount(forms.collateral)) {
-                        setStatus("Enter a positive collateral amount.");
+                      if (!isValidMicroStx(forms.collateral)) {
+                        setStatus("Enter a positive amount with up to 6 decimals.");
                         return;
                       }
                       submitCall("collateral", "add-collateral", [
-                        uintCV(parseAmount(forms.collateral)),
+                        uintCV(toMicroStx(forms.collateral)),
                         stringAsciiCV("STX"),
                       ]);
                     }}
@@ -597,18 +609,19 @@ function App() {
                   <input
                     type="number"
                     min="0"
+                    step="0.000001"
                     value={forms.borrow}
                     onChange={(event) => updateForm("borrow", event.target.value)}
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "borrow" || !isPositiveAmount(forms.borrow)}
+                    disabled={busyAction === "borrow" || !isValidMicroStx(forms.borrow)}
                     onClick={() => {
-                      if (!isPositiveAmount(forms.borrow)) {
-                        setStatus("Enter a positive borrow amount.");
+                      if (!isValidMicroStx(forms.borrow)) {
+                        setStatus("Enter a positive amount with up to 6 decimals.");
                         return;
                       }
-                      submitCall("borrow", "borrow", [uintCV(parseAmount(forms.borrow))]);
+                      submitCall("borrow", "borrow", [uintCV(toMicroStx(forms.borrow))]);
                     }}
                   >
                     {busyAction === "borrow" ? "Pending..." : "Borrow"}
@@ -620,18 +633,19 @@ function App() {
                   <input
                     type="number"
                     min="0"
+                    step="0.000001"
                     value={forms.repay}
                     onChange={(event) => updateForm("repay", event.target.value)}
                   />
                   <button
                     className="primary"
-                    disabled={busyAction === "repay" || !isPositiveAmount(forms.repay)}
+                    disabled={busyAction === "repay" || !isValidMicroStx(forms.repay)}
                     onClick={() => {
-                      if (!isPositiveAmount(forms.repay)) {
-                        setStatus("Enter a positive repay amount.");
+                      if (!isValidMicroStx(forms.repay)) {
+                        setStatus("Enter a positive amount with up to 6 decimals.");
                         return;
                       }
-                      submitCall("repay", "repay", [uintCV(parseAmount(forms.repay))]);
+                      submitCall("repay", "repay", [uintCV(toMicroStx(forms.repay))]);
                     }}
                   >
                     {busyAction === "repay" ? "Pending..." : "Repay"}
