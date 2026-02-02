@@ -69,13 +69,22 @@ function App() {
   const [status, setStatus] = useState("Ready.");
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [stats, setStats] = useState({ totalDeposits: "0", totalBorrows: "0" });
+  const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [position, setPosition] = useState({
     deposit: "0",
     collateral: "0",
     loan: "0",
+    interest: "0",
     health: "0",
   });
   const [forms, setForms] = useState({
+    deposit: "",
+    withdraw: "",
+    collateral: "",
+    borrow: "",
+    repay: "",
+  });
+  const [formErrors, setFormErrors] = useState({
     deposit: "",
     withdraw: "",
     collateral: "",
@@ -127,17 +136,39 @@ function App() {
 
   const updateForm = (key: keyof typeof forms, value: string) => {
     setForms((prev) => ({ ...prev, [key]: value }));
+    setFormErrors((prev) => ({ ...prev, [key]: "" }));
   };
 
   const MICROSTX_FACTOR = 1_000_000;
+  const COLLATERAL_RATIO = 150;
   const parseAmount = (value: string) => Number(value);
   const toMicroStx = (value: string) => Math.round(parseAmount(value) * MICROSTX_FACTOR);
+  const fromMicroStx = (value: string) => parseAmount(value) / MICROSTX_FACTOR;
+  const formatStx = (value: string) => {
+    const parsed = parseAmount(value);
+    if (!Number.isFinite(parsed)) return "0";
+    return fromMicroStx(String(parsed)).toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 6,
+    });
+  };
   const isPositiveAmount = (value: string) => {
     const amount = parseAmount(value);
     return Number.isFinite(amount) && amount > 0;
   };
   const isValidMicroStx = (value: string) =>
     isPositiveAmount(value) && Number.isInteger(toMicroStx(value)) && toMicroStx(value) > 0;
+
+  const setFieldError = (key: keyof typeof forms, message: string) => {
+    setFormErrors((prev) => ({ ...prev, [key]: message }));
+  };
+
+  const normalizeError = (error: unknown) => {
+    if (!error) return "Unknown error.";
+    if (typeof error === "string") return error;
+    if (error instanceof Error) return error.message || "Unknown error.";
+    return "Unknown error.";
+  };
 
   const unwrapResponse = (json: any) => {
     if (!json) return null;
@@ -166,6 +197,28 @@ function App() {
     if (json.type === "uint" || json.type === "int") return json.value ?? "0";
     if (typeof json.value === "string") return json.value;
     return "0";
+  };
+
+  const stacksApiBase =
+    stacksNetworkName === "mainnet"
+      ? "https://stacks-node-api.mainnet.stacks.co"
+      : "https://stacks-node-api.testnet.stacks.co";
+
+  const fetchStxBalance = async (address: string) => {
+    setStatus("Loading wallet balance...");
+    try {
+      const response = await fetch(`${stacksApiBase}/extended/v1/address/${address}/stx`);
+      if (!response.ok) {
+        throw new Error("Balance fetch failed");
+      }
+      const data = await response.json();
+      const balance = typeof data?.balance === "string" ? data.balance : "0";
+      setWalletBalance(balance);
+      setStatus("Wallet balance updated.");
+    } catch (error) {
+      setWalletBalance(null);
+      setStatus("Failed to load wallet balance.");
+    }
   };
 
   const connectWallet = async () => {
@@ -237,7 +290,8 @@ function App() {
         },
       });
     } catch (error) {
-      setStatus(`Failed to submit ${label}.`);
+      const message = normalizeError(error);
+      setStatus(`Failed to submit ${label}: ${message}`);
       setBusyAction(null);
     }
   };
@@ -314,6 +368,14 @@ function App() {
         network: stacksNetwork,
         senderAddress,
       });
+      const interestCv = await callReadOnlyFunction({
+        contractAddress: lendingPoolConfig.address,
+        contractName: lendingPoolConfig.name,
+        functionName: "calculate-current-interest",
+        functionArgs: [principalCV(stxAddress)],
+        network: stacksNetwork,
+        senderAddress,
+      });
       const healthCv = await callReadOnlyFunction({
         contractAddress: lendingPoolConfig.address,
         contractName: lendingPoolConfig.name,
@@ -326,6 +388,7 @@ function App() {
       const depositJson = cvToJSON(depositCv);
       const collateralJson = cvToJSON(collateralCv);
       const loanJson = cvToJSON(loanCv);
+      const interestJson = cvToJSON(interestCv);
       const healthJson = cvToJSON(healthCv);
 
       const depositTuple = unwrapTuple(unwrapOptional(unwrapResponse(depositJson)));
@@ -336,6 +399,7 @@ function App() {
         deposit: readUint(depositTuple?.amount),
         collateral: readUint(collateralTuple?.amount),
         loan: readUint(loanTuple?.["principal-amount"]),
+        interest: readUint(unwrapResponse(interestJson)),
         health: readUint(unwrapResponse(healthJson)),
       });
       setStatus("Position updated.");
@@ -343,6 +407,25 @@ function App() {
       setStatus("Failed to refresh position.");
     }
   };
+
+  useEffect(() => {
+    if (!canCall) return;
+    void refreshStats();
+  }, [canCall]);
+
+  useEffect(() => {
+    if (!stxAddress) return;
+    void fetchStxBalance(stxAddress);
+    void refreshPosition();
+  }, [stxAddress, canCall]);
+
+  const walletBalanceLabel = walletBalance ? formatStx(walletBalance) : "—";
+  const collateralMicro = parseAmount(position.collateral);
+  const debtMicro = parseAmount(position.loan) + parseAmount(position.interest);
+  const maxBorrowMicro = Math.floor((collateralMicro * 100) / COLLATERAL_RATIO);
+  const availableBorrowMicro = Math.max(0, maxBorrowMicro - debtMicro);
+  const availableBorrowLabel = formatStx(String(availableBorrowMicro));
+  const maxBorrowLabel = formatStx(String(maxBorrowMicro));
 
   return (
     <div className="app-shell">
@@ -396,6 +479,16 @@ function App() {
           <div className="summary-card">
             <p className="card-title">Wallet status</p>
             <p className="address">{stxAddress || "Not connected"}</p>
+            <div className="summary-metrics">
+              <div>
+                <span>Wallet balance</span>
+                <strong>{walletBalanceLabel} STX</strong>
+              </div>
+              <div>
+                <span>Available to borrow</span>
+                <strong>{availableBorrowLabel} STX</strong>
+              </div>
+            </div>
             <p className="summary-note">
               {reownProjectId ? "WalletConnect ready" : "Set VITE_REOWN_PROJECT_ID"}
             </p>
@@ -477,19 +570,26 @@ function App() {
               <div className="actions">
                 <div className="action-card">
                   <h3>Deposit STX</h3>
+                  <p className="action-meta">Wallet balance: {walletBalanceLabel} STX</p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.deposit}
                     onChange={(event) => updateForm("deposit", event.target.value)}
+                    className={formErrors.deposit ? "input-error" : ""}
                   />
+                  {formErrors.deposit && (
+                    <p className="field-error">{formErrors.deposit}</p>
+                  )}
                   <button
                     className="primary"
                     disabled={busyAction === "deposit" || !isValidMicroStx(forms.deposit)}
                     onClick={() => {
                       if (!isValidMicroStx(forms.deposit)) {
-                        setStatus("Enter a positive amount with up to 6 decimals.");
+                        const message = "Enter a positive amount with up to 6 decimals.";
+                        setStatus(message);
+                        setFieldError("deposit", message);
                         return;
                       }
                       submitCall("deposit", "deposit", [uintCV(toMicroStx(forms.deposit))]);
@@ -501,19 +601,26 @@ function App() {
 
                 <div className="action-card">
                   <h3>Withdraw STX</h3>
+                  <p className="action-meta">Wallet balance: {walletBalanceLabel} STX</p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.withdraw}
                     onChange={(event) => updateForm("withdraw", event.target.value)}
+                    className={formErrors.withdraw ? "input-error" : ""}
                   />
+                  {formErrors.withdraw && (
+                    <p className="field-error">{formErrors.withdraw}</p>
+                  )}
                   <button
                     className="primary"
                     disabled={busyAction === "withdraw" || !isValidMicroStx(forms.withdraw)}
                     onClick={() => {
                       if (!isValidMicroStx(forms.withdraw)) {
-                        setStatus("Enter a positive amount with up to 6 decimals.");
+                        const message = "Enter a positive amount with up to 6 decimals.";
+                        setStatus(message);
+                        setFieldError("withdraw", message);
                         return;
                       }
                       submitCall("withdraw", "withdraw", [uintCV(toMicroStx(forms.withdraw))]);
@@ -525,19 +632,28 @@ function App() {
 
                 <div className="action-card">
                   <h3>Add Collateral</h3>
+                  <p className="action-meta">
+                    Collateral on protocol: {formatStx(position.collateral)} STX
+                  </p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.collateral}
                     onChange={(event) => updateForm("collateral", event.target.value)}
+                    className={formErrors.collateral ? "input-error" : ""}
                   />
+                  {formErrors.collateral && (
+                    <p className="field-error">{formErrors.collateral}</p>
+                  )}
                   <button
                     className="primary"
                     disabled={busyAction === "collateral" || !isValidMicroStx(forms.collateral)}
                     onClick={() => {
                       if (!isValidMicroStx(forms.collateral)) {
-                        setStatus("Enter a positive amount with up to 6 decimals.");
+                        const message = "Enter a positive amount with up to 6 decimals.";
+                        setStatus(message);
+                        setFieldError("collateral", message);
                         return;
                       }
                       submitCall("collateral", "add-collateral", [
@@ -606,19 +722,28 @@ function App() {
               <div className="actions">
                 <div className="action-card">
                   <h3>Borrow STX</h3>
+                  <p className="action-meta">
+                    Available: {availableBorrowLabel} STX (max {maxBorrowLabel} STX)
+                  </p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.borrow}
                     onChange={(event) => updateForm("borrow", event.target.value)}
+                    className={formErrors.borrow ? "input-error" : ""}
                   />
+                  {formErrors.borrow && (
+                    <p className="field-error">{formErrors.borrow}</p>
+                  )}
                   <button
                     className="primary"
                     disabled={busyAction === "borrow" || !isValidMicroStx(forms.borrow)}
                     onClick={() => {
                       if (!isValidMicroStx(forms.borrow)) {
-                        setStatus("Enter a positive amount with up to 6 decimals.");
+                        const message = "Enter a positive amount with up to 6 decimals.";
+                        setStatus(message);
+                        setFieldError("borrow", message);
                         return;
                       }
                       submitCall("borrow", "borrow", [uintCV(toMicroStx(forms.borrow))]);
@@ -630,19 +755,26 @@ function App() {
 
                 <div className="action-card">
                   <h3>Repay</h3>
+                  <p className="action-meta">Wallet balance: {walletBalanceLabel} STX</p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.repay}
                     onChange={(event) => updateForm("repay", event.target.value)}
+                    className={formErrors.repay ? "input-error" : ""}
                   />
+                  {formErrors.repay && (
+                    <p className="field-error">{formErrors.repay}</p>
+                  )}
                   <button
                     className="primary"
                     disabled={busyAction === "repay" || !isValidMicroStx(forms.repay)}
                     onClick={() => {
                       if (!isValidMicroStx(forms.repay)) {
-                        setStatus("Enter a positive amount with up to 6 decimals.");
+                        const message = "Enter a positive amount with up to 6 decimals.";
+                        setStatus(message);
+                        setFieldError("repay", message);
                         return;
                       }
                       submitCall("repay", "repay", [uintCV(toMicroStx(forms.repay))]);

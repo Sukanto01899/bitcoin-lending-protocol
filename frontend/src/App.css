@@ -191,6 +191,25 @@ h1 {
   font-size: 0.9rem;
 }
 
+.summary-metrics {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.summary-metrics span {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.summary-metrics strong {
+  font-size: 1rem;
+  color: var(--text);
+}
+
 .wallet-card {
   background: var(--panel);
   border-radius: 20px;
@@ -358,6 +377,11 @@ button:hover:not(:disabled) {
   font-size: 0.9rem;
 }
 
+.action-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
 input {
   padding: 10px 12px;
   border-radius: 12px;
@@ -370,6 +394,12 @@ input {
 input.input-error {
   border-color: #f87171;
   background: rgba(248, 113, 113, 0.12);
+}
+
+.field-error {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #fca5a5;
 }
 
 .contract-grid {
