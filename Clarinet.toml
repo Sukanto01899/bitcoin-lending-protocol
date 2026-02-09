@@ -13,48 +13,48 @@ cache_dir = "./.cache"
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
 
-[contracts.lending-pool-v3]
-path = "contracts/lending-pool-v3.clar"
+[contracts.lending-pool-v4]
+path = "contracts/lending-pool-v4.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.passkey-signer-v3]
-path = "contracts/auth/passkey-signer-v3.clar"
+[contracts.passkey-signer-v4]
+path = "contracts/auth/passkey-signer-v4.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.protocol-governance-v3]
-path = "contracts/governance/protocol-governance-v3.clar"
+[contracts.protocol-governance-v4]
+path = "contracts/governance/protocol-governance-v4.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.simple-liquidator-v3]
-path = "contracts/liquidators/simple-liquidator-v3.clar"
+[contracts.simple-liquidator-v4]
+path = "contracts/liquidators/simple-liquidator-v4.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.price-oracle-v3]
-path = "contracts/oracle/price-oracle-v3.clar"
+[contracts.price-oracle-v4]
+path = "contracts/oracle/price-oracle-v4.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.liquidator-trait-v3]
-path = "contracts/traits/liquidator-trait-v3.clar"
+[contracts.liquidator-trait-v4]
+path = "contracts/traits/liquidator-trait-v4.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.lending-pool-v3-trait]
-path = "contracts/traits/lending-pool-v3-trait.clar"
+[contracts.lending-pool-v4-trait]
+path = "contracts/traits/lending-pool-v4-trait.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.math-helpers-v3]
-path = "contracts/utils/math-helpers-v3.clar"
+[contracts.math-helpers-v4]
+path = "contracts/utils/math-helpers-v4.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.test-ref-v3]
-path = "contracts/test-ref-v3.clar"
+[contracts.test-ref-v4]
+path = "contracts/test-ref-v4.clar"
 epoch = "3.3"
 clarity_version = 3
 
