@@ -3,7 +3,7 @@
 ;; Implements the liquidator trait and works with the lending pool
 ;; This contract is verified by the lending pool using contract-hash?
 
-(impl-trait .liquidator-trait-v3.liquidator-trait-v3)
+(impl-trait .liquidator-trait-v4.liquidator-trait-v4)
 
 ;; Constants
 (define-constant LIQUIDATION-BONUS-BPS u1000) ;; 10% bonus
@@ -11,11 +11,14 @@
 (define-constant err-insufficient-funds (err u501))
 
 ;; Implement liquidate function from trait
-(define-public (liquidate (borrower principal) (debt-amount uint))
-    (let (
-        ;; Calculate total amount needed (debt + bonus)
-        (total-needed (+ debt-amount (/ (* debt-amount LIQUIDATION-BONUS-BPS) u10000)))
+(define-public (liquidate
+        (borrower principal)
+        (debt-amount uint)
     )
+    (let (
+            ;; Calculate total amount needed (debt + bonus)
+            (total-needed (+ debt-amount (/ (* debt-amount LIQUIDATION-BONUS-BPS) u10000)))
+        )
         ;; Note: The actual liquidation logic is handled by the lending pool contract
         ;; This contract is called by the lending pool with restrict-assets? protection
         ;; The lending pool will:
@@ -23,11 +26,11 @@
         ;; 2. Set asset restrictions using restrict-assets?
         ;; 3. Transfer collateral to this contract
         ;; 4. This contract can then process the liquidation (swap, etc.)
-        
+
         ;; Validate inputs
         (asserts! (> debt-amount u0) err-liquidation-failed)
         (asserts! (> total-needed u0) err-liquidation-failed)
-        
+
         ;; Return the amount that will be received (debt + bonus)
         (ok total-needed)
     )
@@ -53,4 +56,3 @@
 (define-read-only (get-bonus-amount (debt uint))
     (ok (/ (* debt LIQUIDATION-BONUS-BPS) u10000))
 )
-

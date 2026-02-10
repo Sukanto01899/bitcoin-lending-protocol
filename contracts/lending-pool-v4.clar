@@ -6,11 +6,11 @@
 ;; - returns numeric loan status fields (no to-ascii?)
 
 ;; Import traits
-(use-trait liquidator-trait-v3 .liquidator-trait-v3.liquidator-trait-v3)
+(use-trait liquidator-trait-v4 .liquidator-trait-v4.liquidator-trait-v4)
 
 ;; Constants
 ;; Note: contract-owner should be set via set-admin after deployment
-(define-constant CONTRACT-ADDRESS .lending-pool-v3)
+(define-constant CONTRACT-ADDRESS .lending-pool-v4)
 (define-constant err-owner-only (err u400))
 (define-constant err-insufficient-balance (err u401))
 (define-constant err-insufficient-collateral (err u402))
@@ -277,7 +277,9 @@
                     last-interest-update: stacks-block-height,
                 })
                 (if (> principal-paid u0)
-                    (var-set total-borrows (- (var-get total-borrows) principal-paid))
+                    (var-set total-borrows
+                        (- (var-get total-borrows) principal-paid)
+                    )
                     true
                 )
             )
@@ -290,7 +292,7 @@
 ;; Liquidate undercollateralized position
 (define-public (liquidate
         (borrower principal)
-        (liquidator <liquidator-trait-v3>)
+        (liquidator <liquidator-trait-v4>)
     )
     (let (
             (loan-data (unwrap! (map-get? user-loans { user: borrower }) err-loan-not-found))

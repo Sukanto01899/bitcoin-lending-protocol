@@ -2,7 +2,7 @@
 ;; Standard interface for liquidator contracts
 ;; Enables verified third-party liquidation bots
 
-(define-trait liquidator-trait-v3
+(define-trait liquidator-trait-v4
     (
         ;; Liquidate an undercollateralized position
         ;; Returns the amount of collateral seized
@@ -15,4 +15,3 @@
         (can-liquidate (principal) (response bool uint))
     )
 )
-

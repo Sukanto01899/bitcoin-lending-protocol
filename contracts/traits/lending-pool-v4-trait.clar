@@ -1,7 +1,7 @@
 ;; Lending Pool Trait
 ;; Standard interface for lending pool implementations
 
-(define-trait lending-pool-v3-trait
+(define-trait lending-pool-v4-trait
     (
         ;; Deposit assets into the pool
         (deposit (uint) (response bool uint))
@@ -25,4 +25,3 @@
         (get-interest-rate () (response uint uint))
     )
 )
-
