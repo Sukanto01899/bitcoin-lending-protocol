@@ -3,7 +3,7 @@
 ;; Implements the liquidator trait and works with the lending pool
 ;; This contract is verified by the lending pool using contract-hash?
 
-(impl-trait .liquidator-trait-v4.liquidator-trait-v4)
+(impl-trait .liquidator-trait-v5.liquidator-trait-v5)
 
 ;; Constants
 (define-constant LIQUIDATION-BONUS-BPS u1000) ;; 10% bonus

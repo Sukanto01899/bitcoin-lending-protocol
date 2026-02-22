@@ -43,8 +43,8 @@ path = "contracts/traits/liquidator-trait-v5.clar"
 epoch = "3.3"
 clarity_version = 3
 
-[contracts.lending-pool-v4-trait]
-path = "contracts/traits/lending-pool-v4-trait.clar"
+[contracts.lending-pool-v5-trait]
+path = "contracts/traits/lending-pool-v5-trait.clar"
 epoch = "3.3"
 clarity_version = 3
 
