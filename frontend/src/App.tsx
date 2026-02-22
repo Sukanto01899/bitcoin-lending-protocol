@@ -22,20 +22,34 @@ import { EthersAdapter } from "@reown/appkit-adapter-ethers";
 import { sepolia } from "@reown/appkit/networks";
 import "./App.css";
 
-const stacksNetworkName = (import.meta.env.VITE_STACKS_NETWORK as string | undefined) || "testnet";
-const stacksNetwork = stacksNetworkName === "mainnet" ? STACKS_MAINNET : STACKS_TESTNET;
-const networkLabel = stacksNetworkName === "mainnet" ? "Stacks Mainnet" : "Stacks Testnet";
+const stacksNetworkName =
+  (import.meta.env.VITE_STACKS_NETWORK as string | undefined) || "testnet";
+const stacksNetwork =
+  stacksNetworkName === "mainnet" ? STACKS_MAINNET : STACKS_TESTNET;
+const networkLabel =
+  stacksNetworkName === "mainnet" ? "Stacks Mainnet" : "Stacks Testnet";
 const appDetails = {
   name: "Bitcoin Lending Protocol",
   icon: "https://appkit.reown.com/favicon.ico",
 };
 
-const reownProjectId = import.meta.env.VITE_REOWN_PROJECT_ID as string | undefined;
-const envDeployer = (import.meta.env.VITE_CONTRACT_DEPLOYER as string | undefined) || "";
-const envLendingPool = (import.meta.env.VITE_LENDING_POOL_CONTRACT as string | undefined) || "lending-pool-v3";
-const envPriceOracle = (import.meta.env.VITE_PRICE_ORACLE_CONTRACT as string | undefined) || "price-oracle-v3";
-const envGovernance = (import.meta.env.VITE_GOVERNANCE_CONTRACT as string | undefined) || "protocol-governance-v3";
-const envPasskey = (import.meta.env.VITE_PASSKEY_CONTRACT as string | undefined) || "passkey-signer-v3";
+const reownProjectId = import.meta.env.VITE_REOWN_PROJECT_ID as
+  | string
+  | undefined;
+const envDeployer =
+  (import.meta.env.VITE_CONTRACT_DEPLOYER as string | undefined) || "";
+const envLendingPool =
+  (import.meta.env.VITE_LENDING_POOL_CONTRACT as string | undefined) ||
+  "lending-pool-v5";
+const envPriceOracle =
+  (import.meta.env.VITE_PRICE_ORACLE_CONTRACT as string | undefined) ||
+  "price-oracle-v5";
+const envGovernance =
+  (import.meta.env.VITE_GOVERNANCE_CONTRACT as string | undefined) ||
+  "protocol-governance-v5";
+const envPasskey =
+  (import.meta.env.VITE_PASSKEY_CONTRACT as string | undefined) ||
+  "passkey-signer-v5";
 
 const menuItems = ["Lend", "Borrow", "Governance", "Features"] as const;
 type MenuItem = (typeof menuItems)[number];
@@ -50,7 +64,7 @@ function initAppKit() {
     projectId: reownProjectId,
     metadata: {
       name: "Bitcoin Lending Protocol",
-      description: "Testnet lending for STX collateral",
+      description: "Stacks lending for STX collateral",
       url: window.location.origin,
       icons: ["https://appkit.reown.com/favicon.ico"],
     },
@@ -121,7 +135,8 @@ function App() {
     };
   };
 
-  const isDeployerValid = contractAddress.length > 0 && validateStacksAddress(contractAddress);
+  const isDeployerValid =
+    contractAddress.length > 0 && validateStacksAddress(contractAddress);
   const lendingPoolConfig = parseContractInput(lendingPool, contractAddress);
   const isLendingPoolValid = lendingPoolConfig.isValid;
   const canCall = isLendingPoolValid;
@@ -142,7 +157,8 @@ function App() {
   const MICROSTX_FACTOR = 1_000_000;
   const COLLATERAL_RATIO = 150;
   const parseAmount = (value: string) => Number(value);
-  const toMicroStx = (value: string) => Math.round(parseAmount(value) * MICROSTX_FACTOR);
+  const toMicroStx = (value: string) =>
+    Math.round(parseAmount(value) * MICROSTX_FACTOR);
   const fromMicroStx = (value: string) => parseAmount(value) / MICROSTX_FACTOR;
   const formatStx = (value: string) => {
     const parsed = parseAmount(value);
@@ -157,7 +173,9 @@ function App() {
     return Number.isFinite(amount) && amount > 0;
   };
   const isValidMicroStx = (value: string) =>
-    isPositiveAmount(value) && Number.isInteger(toMicroStx(value)) && toMicroStx(value) > 0;
+    isPositiveAmount(value) &&
+    Number.isInteger(toMicroStx(value)) &&
+    toMicroStx(value) > 0;
 
   const setFieldError = (key: keyof typeof forms, message: string) => {
     setFormErrors((prev) => ({ ...prev, [key]: message }));
@@ -207,7 +225,9 @@ function App() {
   const fetchStxBalance = async (address: string) => {
     setStatus("Loading wallet balance...");
     try {
-      const response = await fetch(`${stacksApiBase}/extended/v1/address/${address}/stx`);
+      const response = await fetch(
+        `${stacksApiBase}/extended/v1/address/${address}/stx`,
+      );
       if (!response.ok) {
         throw new Error("Balance fetch failed");
       }
@@ -242,7 +262,11 @@ function App() {
       });
       const address = getLocalStorage()?.addresses?.stx?.[0]?.address || null;
       setStxAddress(address);
-      setStatus(address ? "Wallet connected." : "Wallet connected. No STX address found.");
+      setStatus(
+        address
+          ? "Wallet connected."
+          : "Wallet connected. No STX address found.",
+      );
     } catch (error) {
       setStatus("Wallet connection canceled.");
     }
@@ -257,7 +281,11 @@ function App() {
   const submitCall = async (
     label: string,
     functionName: string,
-    functionArgs: Array<ReturnType<typeof uintCV> | ReturnType<typeof stringAsciiCV> | ReturnType<typeof principalCV>>,
+    functionArgs: Array<
+      | ReturnType<typeof uintCV>
+      | ReturnType<typeof stringAsciiCV>
+      | ReturnType<typeof principalCV>
+    >,
   ) => {
     if (!canCall) {
       setStatus("Set a valid deployer address and lending pool contract name.");
@@ -391,8 +419,12 @@ function App() {
       const interestJson = cvToJSON(interestCv);
       const healthJson = cvToJSON(healthCv);
 
-      const depositTuple = unwrapTuple(unwrapOptional(unwrapResponse(depositJson)));
-      const collateralTuple = unwrapTuple(unwrapOptional(unwrapResponse(collateralJson)));
+      const depositTuple = unwrapTuple(
+        unwrapOptional(unwrapResponse(depositJson)),
+      );
+      const collateralTuple = unwrapTuple(
+        unwrapOptional(unwrapResponse(collateralJson)),
+      );
       const loanTuple = unwrapTuple(unwrapOptional(unwrapResponse(loanJson)));
 
       setPosition({
@@ -471,8 +503,8 @@ function App() {
           <p className="eyebrow">Bitcoin Lending Protocol</p>
           <h1>{networkLabel} Lending Desk</h1>
           <p className="subhead">
-            Deposit STX, post collateral, and borrow against your position. Built for
-            protocol operators and early testers.
+            Deposit STX, post collateral, and borrow against your position.
+            Built for protocol operators and early testers.
           </p>
         </div>
         <div className="wallet-summary">
@@ -490,7 +522,9 @@ function App() {
               </div>
             </div>
             <p className="summary-note">
-              {reownProjectId ? "WalletConnect ready" : "Set VITE_REOWN_PROJECT_ID"}
+              {reownProjectId
+                ? "WalletConnect ready"
+                : "Set VITE_REOWN_PROJECT_ID"}
             </p>
           </div>
         </div>
@@ -522,7 +556,9 @@ function App() {
           <>
             <div className="panel">
               <h2>Pool Overview</h2>
-              <p className="panel-subtitle">Live read-only data from the lending pool.</p>
+              <p className="panel-subtitle">
+                Live read-only data from the lending pool.
+              </p>
               <div className="stats">
                 <div>
                   <span>Total deposits</span>
@@ -540,7 +576,9 @@ function App() {
 
             <div className="panel">
               <h2>Your Position</h2>
-              <p className="panel-subtitle">Read-only account metrics from the pool.</p>
+              <p className="panel-subtitle">
+                Read-only account metrics from the pool.
+              </p>
               <div className="stats">
                 <div>
                   <span>Deposited</span>
@@ -566,17 +604,23 @@ function App() {
 
             <div className="panel wide">
               <h2>Lend Actions</h2>
-              <p className="panel-subtitle">Sign transactions with the Stacks wallet.</p>
+              <p className="panel-subtitle">
+                Sign transactions with the Stacks wallet.
+              </p>
               <div className="actions">
                 <div className="action-card">
                   <h3>Deposit STX</h3>
-                  <p className="action-meta">Wallet balance: {walletBalanceLabel} STX</p>
+                  <p className="action-meta">
+                    Wallet balance: {walletBalanceLabel} STX
+                  </p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.deposit}
-                    onChange={(event) => updateForm("deposit", event.target.value)}
+                    onChange={(event) =>
+                      updateForm("deposit", event.target.value)
+                    }
                     className={formErrors.deposit ? "input-error" : ""}
                   />
                   {formErrors.deposit && (
@@ -584,15 +628,21 @@ function App() {
                   )}
                   <button
                     className="primary"
-                    disabled={busyAction === "deposit" || !isValidMicroStx(forms.deposit)}
+                    disabled={
+                      busyAction === "deposit" ||
+                      !isValidMicroStx(forms.deposit)
+                    }
                     onClick={() => {
                       if (!isValidMicroStx(forms.deposit)) {
-                        const message = "Enter a positive amount with up to 6 decimals.";
+                        const message =
+                          "Enter a positive amount with up to 6 decimals.";
                         setStatus(message);
                         setFieldError("deposit", message);
                         return;
                       }
-                      submitCall("deposit", "deposit", [uintCV(toMicroStx(forms.deposit))]);
+                      submitCall("deposit", "deposit", [
+                        uintCV(toMicroStx(forms.deposit)),
+                      ]);
                     }}
                   >
                     {busyAction === "deposit" ? "Pending..." : "Deposit"}
@@ -601,13 +651,17 @@ function App() {
 
                 <div className="action-card">
                   <h3>Withdraw STX</h3>
-                  <p className="action-meta">Wallet balance: {walletBalanceLabel} STX</p>
+                  <p className="action-meta">
+                    Wallet balance: {walletBalanceLabel} STX
+                  </p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.withdraw}
-                    onChange={(event) => updateForm("withdraw", event.target.value)}
+                    onChange={(event) =>
+                      updateForm("withdraw", event.target.value)
+                    }
                     className={formErrors.withdraw ? "input-error" : ""}
                   />
                   {formErrors.withdraw && (
@@ -615,15 +669,21 @@ function App() {
                   )}
                   <button
                     className="primary"
-                    disabled={busyAction === "withdraw" || !isValidMicroStx(forms.withdraw)}
+                    disabled={
+                      busyAction === "withdraw" ||
+                      !isValidMicroStx(forms.withdraw)
+                    }
                     onClick={() => {
                       if (!isValidMicroStx(forms.withdraw)) {
-                        const message = "Enter a positive amount with up to 6 decimals.";
+                        const message =
+                          "Enter a positive amount with up to 6 decimals.";
                         setStatus(message);
                         setFieldError("withdraw", message);
                         return;
                       }
-                      submitCall("withdraw", "withdraw", [uintCV(toMicroStx(forms.withdraw))]);
+                      submitCall("withdraw", "withdraw", [
+                        uintCV(toMicroStx(forms.withdraw)),
+                      ]);
                     }}
                   >
                     {busyAction === "withdraw" ? "Pending..." : "Withdraw"}
@@ -640,7 +700,9 @@ function App() {
                     min="0"
                     step="0.000001"
                     value={forms.collateral}
-                    onChange={(event) => updateForm("collateral", event.target.value)}
+                    onChange={(event) =>
+                      updateForm("collateral", event.target.value)
+                    }
                     className={formErrors.collateral ? "input-error" : ""}
                   />
                   {formErrors.collateral && (
@@ -648,10 +710,14 @@ function App() {
                   )}
                   <button
                     className="primary"
-                    disabled={busyAction === "collateral" || !isValidMicroStx(forms.collateral)}
+                    disabled={
+                      busyAction === "collateral" ||
+                      !isValidMicroStx(forms.collateral)
+                    }
                     onClick={() => {
                       if (!isValidMicroStx(forms.collateral)) {
-                        const message = "Enter a positive amount with up to 6 decimals.";
+                        const message =
+                          "Enter a positive amount with up to 6 decimals.";
                         setStatus(message);
                         setFieldError("collateral", message);
                         return;
@@ -662,7 +728,9 @@ function App() {
                       ]);
                     }}
                   >
-                    {busyAction === "collateral" ? "Pending..." : "Add collateral"}
+                    {busyAction === "collateral"
+                      ? "Pending..."
+                      : "Add collateral"}
                   </button>
                 </div>
               </div>
@@ -674,7 +742,9 @@ function App() {
           <>
             <div className="panel">
               <h2>Your Position</h2>
-              <p className="panel-subtitle">Read-only account metrics from the pool.</p>
+              <p className="panel-subtitle">
+                Read-only account metrics from the pool.
+              </p>
               <div className="stats">
                 <div>
                   <span>Deposited</span>
@@ -700,7 +770,9 @@ function App() {
 
             <div className="panel">
               <h2>Pool Overview</h2>
-              <p className="panel-subtitle">Live read-only data from the lending pool.</p>
+              <p className="panel-subtitle">
+                Live read-only data from the lending pool.
+              </p>
               <div className="stats">
                 <div>
                   <span>Total deposits</span>
@@ -718,19 +790,24 @@ function App() {
 
             <div className="panel wide">
               <h2>Borrow Actions</h2>
-              <p className="panel-subtitle">Borrow and repay against your collateral.</p>
+              <p className="panel-subtitle">
+                Borrow and repay against your collateral.
+              </p>
               <div className="actions">
                 <div className="action-card">
                   <h3>Borrow STX</h3>
                   <p className="action-meta">
-                    Available: {availableBorrowLabel} STX (max {maxBorrowLabel} STX)
+                    Available: {availableBorrowLabel} STX (max {maxBorrowLabel}{" "}
+                    STX)
                   </p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.borrow}
-                    onChange={(event) => updateForm("borrow", event.target.value)}
+                    onChange={(event) =>
+                      updateForm("borrow", event.target.value)
+                    }
                     className={formErrors.borrow ? "input-error" : ""}
                   />
                   {formErrors.borrow && (
@@ -738,15 +815,20 @@ function App() {
                   )}
                   <button
                     className="primary"
-                    disabled={busyAction === "borrow" || !isValidMicroStx(forms.borrow)}
+                    disabled={
+                      busyAction === "borrow" || !isValidMicroStx(forms.borrow)
+                    }
                     onClick={() => {
                       if (!isValidMicroStx(forms.borrow)) {
-                        const message = "Enter a positive amount with up to 6 decimals.";
+                        const message =
+                          "Enter a positive amount with up to 6 decimals.";
                         setStatus(message);
                         setFieldError("borrow", message);
                         return;
                       }
-                      submitCall("borrow", "borrow", [uintCV(toMicroStx(forms.borrow))]);
+                      submitCall("borrow", "borrow", [
+                        uintCV(toMicroStx(forms.borrow)),
+                      ]);
                     }}
                   >
                     {busyAction === "borrow" ? "Pending..." : "Borrow"}
@@ -755,13 +837,17 @@ function App() {
 
                 <div className="action-card">
                   <h3>Repay</h3>
-                  <p className="action-meta">Wallet balance: {walletBalanceLabel} STX</p>
+                  <p className="action-meta">
+                    Wallet balance: {walletBalanceLabel} STX
+                  </p>
                   <input
                     type="number"
                     min="0"
                     step="0.000001"
                     value={forms.repay}
-                    onChange={(event) => updateForm("repay", event.target.value)}
+                    onChange={(event) =>
+                      updateForm("repay", event.target.value)
+                    }
                     className={formErrors.repay ? "input-error" : ""}
                   />
                   {formErrors.repay && (
@@ -769,15 +855,20 @@ function App() {
                   )}
                   <button
                     className="primary"
-                    disabled={busyAction === "repay" || !isValidMicroStx(forms.repay)}
+                    disabled={
+                      busyAction === "repay" || !isValidMicroStx(forms.repay)
+                    }
                     onClick={() => {
                       if (!isValidMicroStx(forms.repay)) {
-                        const message = "Enter a positive amount with up to 6 decimals.";
+                        const message =
+                          "Enter a positive amount with up to 6 decimals.";
                         setStatus(message);
                         setFieldError("repay", message);
                         return;
                       }
-                      submitCall("repay", "repay", [uintCV(toMicroStx(forms.repay))]);
+                      submitCall("repay", "repay", [
+                        uintCV(toMicroStx(forms.repay)),
+                      ]);
                     }}
                   >
                     {busyAction === "repay" ? "Pending..." : "Repay"}
@@ -876,7 +967,9 @@ function App() {
 
         <div className="panel wide">
           <h2>Contracts</h2>
-          <p className="panel-subtitle">Edit for your deployed testnet contracts.</p>
+          <p className="panel-subtitle">
+            Edit for your deployed testnet contracts.
+          </p>
           <div className="contract-grid">
             <label>
               Deployer address
@@ -885,7 +978,9 @@ function App() {
                 onChange={(event) => setDeployer(event.target.value)}
                 placeholder="ST..."
                 className={
-                  isDeployerValid || deployer.trim().length === 0 ? "" : "input-error"
+                  isDeployerValid || deployer.trim().length === 0
+                    ? ""
+                    : "input-error"
                 }
               />
             </label>
@@ -895,7 +990,9 @@ function App() {
                 value={lendingPool}
                 onChange={(event) => setLendingPool(event.target.value)}
                 className={
-                  isLendingPoolValid || lendingPool.trim().length === 0 ? "" : "input-error"
+                  isLendingPoolValid || lendingPool.trim().length === 0
+                    ? ""
+                    : "input-error"
                 }
               />
             </label>
@@ -928,4 +1025,3 @@ function App() {
 }
 
 export default App;
-
