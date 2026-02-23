@@ -925,7 +925,7 @@ function App() {
             <div className="panel">
               <h2>Protocol Features</h2>
               <p className="panel-subtitle">
-                Explore what BTCLEND ships today and what is coming next.
+                Explore what BTC LEND ships today and what is coming next.
               </p>
               <div className="stats">
                 <div>

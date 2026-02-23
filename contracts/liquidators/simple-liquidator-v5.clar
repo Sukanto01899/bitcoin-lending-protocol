@@ -1,4 +1,3 @@
-;; Simple Liquidator Contract
 ;; ==========================
 ;; Implements the liquidator trait and works with the lending pool
 ;; This contract is verified by the lending pool using contract-hash?

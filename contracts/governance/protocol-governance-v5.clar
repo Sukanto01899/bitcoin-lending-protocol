@@ -1,6 +1,5 @@
 ;; Protocol Governance Contract
 ;; ============================
-;; Clarity 3-compatible implementation (block-height timelocks)
 
 ;; Constants
 (define-constant contract-owner tx-sender)
@@ -107,7 +106,9 @@
             (voter-balance (stx-get-balance tx-sender))
         )
         ;; Check voting period is active
-        (asserts! (< stacks-block-height (get end-block proposal)) err-proposal-expired)
+        (asserts! (< stacks-block-height (get end-block proposal))
+            err-proposal-expired
+        )
         (asserts! (>= stacks-block-height (get start-block proposal))
             err-proposal-not-found
         )
