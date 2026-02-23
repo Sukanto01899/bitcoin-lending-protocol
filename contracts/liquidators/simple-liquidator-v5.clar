@@ -9,6 +9,13 @@
 (define-constant err-liquidation-failed (err u500))
 (define-constant err-insufficient-funds (err u501))
 
+;; Event to log liquidations
+(define-event liquidation-executed
+  (borrower principal)
+  (debt-amount uint)
+  (total-paid uint)
+)
+
 ;; Implement liquidate function from trait
 (define-public (liquidate
         (borrower principal)
@@ -18,17 +25,16 @@
             ;; Calculate total amount needed (debt + bonus)
             (total-needed (+ debt-amount (/ (* debt-amount LIQUIDATION-BONUS-BPS) u10000)))
         )
-        ;; Note: The actual liquidation logic is handled by the lending pool contract
-        ;; This contract is called by the lending pool with restrict-assets? protection
-        ;; The lending pool will:
-        ;; 1. Verify this contract using contract-hash?
-        ;; 2. Set asset restrictions using restrict-assets?
-        ;; 3. Transfer collateral to this contract
-        ;; 4. This contract can then process the liquidation (swap, etc.)
-
         ;; Validate inputs
         (asserts! (> debt-amount u0) err-liquidation-failed)
         (asserts! (> total-needed u0) err-liquidation-failed)
+
+        ;; Emit liquidation event
+        (emit-event liquidation-executed
+          borrower
+          debt-amount
+          total-needed
+        )
 
         ;; Return the amount that will be received (debt + bonus)
         (ok total-needed)
