@@ -9,7 +9,6 @@
 (use-trait liquidator-trait-v5 .liquidator-trait-v5.liquidator-trait-v5)
 
 ;; Constants
-;; Note: contract-owner should be set via set-admin after deployment
 (define-constant CONTRACT-ADDRESS .lending-pool-v5)
 (define-constant err-owner-only (err u400))
 (define-constant err-insufficient-balance (err u401))

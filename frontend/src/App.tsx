@@ -771,7 +771,7 @@ function App() {
             <div className="panel">
               <h2>Pool Overview</h2>
               <p className="panel-subtitle">
-                Live read-only data from the lending pool.
+                Live read-only data from the lending pool
               </p>
               <div className="stats">
                 <div>
